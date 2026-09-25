@@ -154,6 +154,33 @@ local function set_expose_blur(on)
   end
 end
 
+-- While a bar popup is open, SUPER+LEFT/RIGHT step between popups (plain
+-- arrows stay with the popup: volume, brightness, calendar month ...).
+-- Hyprland would run both bindings of a key, so Omarchy's own window-focus
+-- bindings step aside meanwhile and are restored as Omarchy defines them in
+-- default/hypr/bindings/tiling.lua.
+local POPUP_KEYS = {
+  { key = "SUPER + LEFT", ipc = "previous", default = { "Focus on left window", "l" } },
+  { key = "SUPER + RIGHT", ipc = "next", default = { "Focus on right window", "r" } },
+}
+local popup_binds
+
+local function set_popup_keys(on)
+  if on and not popup_binds then
+    popup_binds = {}
+    for _, k in ipairs(POPUP_KEYS) do
+      hl.unbind(k.key)
+      table.insert(popup_binds, hl.bind(k.key, hl.dsp.exec_cmd(IPC .. k.ipc), { description = "Switch bar popup" }))
+    end
+  elseif not on and popup_binds then
+    for _, keybind in ipairs(popup_binds) do keybind:unbind() end
+    popup_binds = nil
+    for _, k in ipairs(POPUP_KEYS) do
+      hl.bind(k.key, hl.dsp.focus({ direction = k.default[2] }), { description = k.default[1] })
+    end
+  end
+end
+
 local function update_mode()
   local next_mode = "normal"
   if next(open_layers[EXPOSE_NAMESPACE]) then next_mode = "expose"
@@ -161,6 +188,7 @@ local function update_mode()
   if next_mode == mode then return end
   mode = next_mode
   set_expose_blur(mode == "expose")
+  set_popup_keys(mode == "popup")
   apply()
 end
 

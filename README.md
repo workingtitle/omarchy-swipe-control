@@ -16,6 +16,11 @@ popups in the bar. A bar icon opens the settings.
 While Mission Control is open, swipe down to close it; left and right still
 switch workspaces underneath.
 
+While a bar popup is open, SUPER+LEFT and SUPER+RIGHT step between popups too;
+the plain arrows stay with the popup (volume, brightness, calendar month, ...).
+Omarchy's SUPER+LEFT/RIGHT window focus bindings step aside meanwhile and come
+back when the popup closes.
+
 Moving a window past the last workspace creates a new one, even when the plain
 swipe is set to stop there.
 
@@ -40,6 +45,13 @@ keyboards):
 ```lua
 o.bind("XF86LaunchA", "Mission Control", "omarchy-shell -q io.github.workingtitle.gestures toggleExpose")
 o.bind("SUPER + E", "Mission Control", "omarchy-shell -q io.github.workingtitle.gestures toggleExpose")
+```
+
+A keybinding for the bar popups works the same way: `togglePanel` opens the
+last used popup, or closes the open one.
+
+```lua
+o.bind("SUPER + B", "Bar popups", "omarchy-shell -q io.github.workingtitle.gestures togglePanel")
 ```
 
 ## Requirements
@@ -92,7 +104,7 @@ opens or closes. Popup navigation runs through the
 plugin's IPC target:
 
 ```sh
-omarchy-shell io.github.workingtitle.gestures openPanel|next|previous|closePanel|current|expose|closeExpose|toggleExpose|exposeState
+omarchy-shell io.github.workingtitle.gestures openPanel|togglePanel|next|previous|closePanel|current|expose|closeExpose|toggleExpose|exposeState
 ```
 
 To see which gestures are active:

@@ -228,6 +228,7 @@ Panel {
     function toggle(): void { root.toggle() }
     function openPanel(): void { root.openPanel() }
     function closePanel(): void { root.closePanel() }
+    function togglePanel(): void { root.openSlot() ? root.closePanel() : root.openPanel() }
     function next(): void { root.step(1) }
     function previous(): void { root.step(-1) }
     function panelOpened(): void { rememberTimer.restart() }
