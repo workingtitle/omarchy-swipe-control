@@ -8,8 +8,9 @@
 -- Hyprland allows one gesture per finger count and axis, so the horizontal
 -- swipe cannot mean two things at once. Instead the gesture set is swapped:
 -- while a bar popup (layer "omarchy-keyboard-panel") is on screen, left/right
--- step between popups and up closes it; otherwise left/right is the 1:1
--- workspace swipe, up toggles the Omarchy menu and down opens a popup.
+-- step between popups and up closes it; while Mission Control (layer
+-- "omarchy-gestures-expose") is on screen, down closes it; otherwise left/right
+-- is the 1:1 workspace swipe, up opens Mission Control and down opens a popup.
 --
 -- The same swipe with Shift held carries the focused window to the
 -- neighbouring workspace and follows it. Gestures with modifiers are matched
@@ -19,21 +20,22 @@ local M = {}
 
 local SETTINGS_PATH = (os.getenv("HOME") or "") .. "/.local/state/omarchy/gestures-settings.lua"
 local PANEL_NAMESPACE = "omarchy-keyboard-panel"
-local MENU_NAMESPACE = "omarchy-menu"
+local EXPOSE_NAMESPACE = "omarchy-gestures-expose"
 local IPC = "omarchy-shell -q io.github.workingtitle.gestures "
 
 local DEFAULTS = {
   fingers = 3,
   workspaceSwipe = true,
   stopAtLastWorkspace = true,
-  swipeUpMenu = true,
+  swipeUpExpose = true,
   swipeDownPanels = true,
   windowSwipe = true,
 }
 
 local registered = {}
-local open_panels = {}
-local panel_mode = false
+-- Layer addresses on screen per namespace, and the mode they add up to.
+local open_layers = { [PANEL_NAMESPACE] = {}, [EXPOSE_NAMESPACE] = {} }
+local mode = "normal"
 
 local function load_settings()
   local settings = {}
@@ -77,14 +79,6 @@ local function neighbour_workspace(direction)
   return fresh >= 1 and fresh or nil
 end
 
--- `omarchy-menu toggle` asks the shell whether the menu is open, and the shell
--- keeps saying yes for a moment after the menu closed, so the next swipe up
--- would do nothing. Whether the menu layer is on screen is the real answer.
-local function toggle_menu()
-  local open = #hl.get_layers({ namespace = MENU_NAMESPACE }) > 0
-  hl.dispatch(hl.dsp.exec_cmd(open and "omarchy-menu close" or "omarchy-menu summon"))
-end
-
 local function move_window(direction)
   return function()
     if not hl.get_active_window() then return end
@@ -122,7 +116,14 @@ local function apply()
     add(f, "left", move_window(-1), "SHIFT")
   end
 
-  if panel_mode and s.swipeDownPanels then
+  if mode == "expose" then
+    -- Workspaces still switch underneath, and Mission Control follows.
+    if s.workspaceSwipe then add(f, "horizontal", "workspace") end
+    add(f, "down", run(IPC .. "closeExpose"))
+    return
+  end
+
+  if mode == "popup" and s.swipeDownPanels then
     -- The popups sit in a row along the bar, so they move with the fingers
     -- like a scrolled list: fingers right steps to the popup on the right.
     add(f, "right", run(IPC .. "next"))
@@ -132,13 +133,16 @@ local function apply()
   end
 
   if s.workspaceSwipe then add(f, "horizontal", "workspace") end
-  if s.swipeUpMenu then add(f, "up", toggle_menu) end
+  if s.swipeUpExpose then add(f, "up", run(IPC .. "expose")) end
   if s.swipeDownPanels then add(f, "down", run(IPC .. "openPanel")) end
 end
 
-local function set_panel_mode(on)
-  if on == panel_mode then return end
-  panel_mode = on
+local function update_mode()
+  local next_mode = "normal"
+  if next(open_layers[EXPOSE_NAMESPACE]) then next_mode = "expose"
+  elseif next(open_layers[PANEL_NAMESPACE]) then next_mode = "popup" end
+  if next_mode == mode then return end
+  mode = next_mode
   apply()
 end
 
@@ -146,12 +150,11 @@ end
 function M.describe()
   local parts = {}
   for _, g in ipairs(registered) do table.insert(parts, g.fingers .. ":" .. (g.mods and g.mods .. "+" or "") .. g.direction) end
-  return (panel_mode and "popup" or "normal") .. " " .. table.concat(parts, ",")
+  return mode .. " " .. table.concat(parts, ",")
 end
 
--- Exposed for testing, e.g. `hyprctl eval 'OmarchyGestures.toggle_menu()'`.
+-- Exposed for testing: `hyprctl repl 'return OmarchyGestures.neighbour_workspace(1)'`.
 M.neighbour_workspace = neighbour_workspace
-M.toggle_menu = toggle_menu
 
 function M.reload()
   M.settings = load_settings()
@@ -159,22 +162,25 @@ function M.reload()
 end
 
 -- Switching popups closes one and opens the next, in either order, so the
--- mode follows the set of popup layers on screen rather than the last event.
+-- mode follows the set of layers on screen rather than the last event.
 hl.on("layer.opened", function(layer)
-  if layer and layer.namespace == PANEL_NAMESPACE then
-    open_panels[layer.address] = true
-    set_panel_mode(true)
-    -- Lets the plugin remember popups opened by mouse or hotkey as well.
-    run(IPC .. "panelOpened")()
-  end
+  local tracked = layer and open_layers[layer.namespace]
+  if not tracked then return end
+  tracked[layer.address] = true
+  update_mode()
+  -- Lets the plugin remember popups opened by mouse or hotkey as well.
+  if layer.namespace == PANEL_NAMESPACE then run(IPC .. "panelOpened")() end
 end)
 
 hl.on("layer.closed", function(layer)
-  if layer and layer.namespace == PANEL_NAMESPACE then
-    open_panels[layer.address] = nil
-    set_panel_mode(next(open_panels) ~= nil)
-  end
+  local tracked = layer and open_layers[layer.namespace]
+  if not tracked then return end
+  tracked[layer.address] = nil
+  update_mode()
 end)
+
+-- Blur what is behind Mission Control, and let it animate itself.
+hl.layer_rule({ match = { namespace = EXPOSE_NAMESPACE }, blur = true, no_anim = true, animation = "none" })
 
 M.reload()
 

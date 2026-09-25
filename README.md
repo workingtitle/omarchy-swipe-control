@@ -1,7 +1,7 @@
 # Trackpad Gestures for Omarchy
 
-macOS-style trackpad gestures for Omarchy: swipe between workspaces, drag the
-focused window along with Shift, toggle the Omarchy menu, and swipe through the
+macOS-style trackpad gestures for Omarchy: swipe between workspaces, open
+Mission Control, drag the focused window along with Shift, and swipe through the
 popups in the bar. A bar icon opens the settings.
 
 ![Trackpad Gestures settings popup](preview.png)
@@ -10,11 +10,30 @@ popups in the bar. A bar icon opens the settings.
 |---|---|---|
 | Left / right | Switch workspace, following your fingers 1:1 | Step to the neighbouring popup |
 | Shift + left / right | Drag the focused window to the workspace on that side and follow it | same |
-| Up | Open the Omarchy menu, or close it when open | Close the popup |
+| Up | Open Mission Control | Close the popup |
 | Down | Open a popup from the right of the bar (last used, or the first) | — |
+
+While Mission Control is open, swipe down to close it; left and right still
+switch workspaces underneath.
 
 Moving a window past the last workspace creates a new one, even when the plain
 swipe is set to stop there.
+
+## Mission Control
+
+Each monitor shows its workspaces as thumbnails along the top and the windows
+of the active workspace spread out below, with live previews.
+
+- Click a window to focus it, or pick one with the arrow keys and Enter.
+- Click a workspace thumbnail to switch to it.
+- Drag a window onto a workspace thumbnail to move it there.
+- Escape, a click on empty space, or swiping down closes it.
+
+Open it without the gesture:
+
+```sh
+omarchy-shell io.github.workingtitle.gestures toggleExpose
+```
 
 ## Requirements
 
@@ -52,7 +71,7 @@ widget's entry in `~/.config/omarchy/shell.json` and mirrored for Hyprland to
 | `fingers` | `3` | Fingers for the main gestures (3 or 4) |
 | `workspaceSwipe` | `true` | Left/right switches workspaces |
 | `stopAtLastWorkspace` | `true` | The plain swipe stops at the last workspace instead of creating an empty one |
-| `swipeUpMenu` | `true` | Up toggles the Omarchy menu |
+| `swipeUpExpose` | `true` | Up opens Mission Control |
 | `swipeDownPanels` | `true` | Down opens bar popups; left/right then moves between them |
 | `startPanel` | `"last"` | Popup that down opens: `"last"` used or `"first"` |
 | `windowSwipe` | `true` | Shift + swipe moves the focused window |
@@ -61,11 +80,12 @@ widget's entry in `~/.config/omarchy/shell.json` and mirrored for Hyprland to
 
 Hyprland allows only one gesture per finger count and direction, so
 `gestures.lua` swaps the gesture set whenever a bar popup (layer
-`omarchy-keyboard-panel`) opens or closes. Popup navigation runs through the
+`omarchy-keyboard-panel`) or Mission Control (layer `omarchy-gestures-expose`)
+opens or closes. Popup navigation runs through the
 plugin's IPC target:
 
 ```sh
-omarchy-shell io.github.workingtitle.gestures openPanel|next|previous|closePanel|current
+omarchy-shell io.github.workingtitle.gestures openPanel|next|previous|closePanel|current|expose|closeExpose|toggleExpose
 ```
 
 To see which gestures are active:

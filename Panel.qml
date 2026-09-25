@@ -25,7 +25,7 @@ Panel {
   readonly property int fingers: setting("fingers", 3) === 4 ? 4 : 3
   readonly property bool workspaceSwipe: setting("workspaceSwipe", true) === true
   readonly property bool stopAtLastWorkspace: setting("stopAtLastWorkspace", true) === true
-  readonly property bool swipeUpMenu: setting("swipeUpMenu", true) === true
+  readonly property bool swipeUpExpose: setting("swipeUpExpose", true) === true
   readonly property bool swipeDownPanels: setting("swipeDownPanels", true) === true
   readonly property bool windowSwipe: setting("windowSwipe", true) === true
   readonly property string startPanel: setting("startPanel", "last") === "first" ? "first" : "last"
@@ -51,7 +51,7 @@ Panel {
       fingers: fingers,
       workspaceSwipe: workspaceSwipe,
       stopAtLastWorkspace: stopAtLastWorkspace,
-      swipeUpMenu: swipeUpMenu,
+      swipeUpExpose: swipeUpExpose,
       swipeDownPanels: swipeDownPanels,
       windowSwipe: windowSwipe,
       startPanel: startPanel
@@ -72,7 +72,7 @@ Panel {
       + "  fingers = " + fingers + ",\n"
       + "  workspaceSwipe = " + workspaceSwipe + ",\n"
       + "  stopAtLastWorkspace = " + stopAtLastWorkspace + ",\n"
-      + "  swipeUpMenu = " + swipeUpMenu + ",\n"
+      + "  swipeUpExpose = " + swipeUpExpose + ",\n"
       + "  swipeDownPanels = " + swipeDownPanels + ",\n"
       + "  windowSwipe = " + windowSwipe + ",\n"
       + "}\n"
@@ -231,6 +231,9 @@ Panel {
     function next(): void { root.step(1) }
     function previous(): void { root.step(-1) }
     function panelOpened(): void { rememberTimer.restart() }
+    function expose(): void { root.eachExpose("show") }
+    function closeExpose(): void { root.eachExpose("hide") }
+    function toggleExpose(): void { root.eachExpose("toggle") }
     function current(): string {
       var slot = root.openSlot()
       return slot ? slot.moduleName : ""
@@ -246,8 +249,8 @@ Panel {
       description: "Left and right follow your fingers, like Spaces on macOS" },
     { key: "stopAtLastWorkspace", kind: "toggle", label: "Stop at the last workspace",
       description: "Otherwise swiping past it creates a new, empty one" },
-    { key: "swipeUpMenu", kind: "toggle", label: "Swipe up opens the menu",
-      description: "Swipe up again to close it, or a bar popup" },
+    { key: "swipeUpExpose", kind: "toggle", label: "Swipe up opens Mission Control",
+      description: "All windows at a glance; swipe down to close. Up also closes a bar popup" },
     { key: "swipeDownPanels", kind: "toggle", label: "Swipe down opens bar popups",
       description: "Then swipe left and right to move between them" },
     { key: "startPanel", kind: "choice", label: "Popup to open",
@@ -279,6 +282,25 @@ Panel {
   }
 
   onOpenedChanged: if (!opened) cursorIndex = -1
+
+  // ---------------------------------------------------------- Mission Control
+
+  // One overlay per bar, so every monitor shows its own workspaces like
+  // Mission Control does on each display.
+  Expose {
+    id: expose
+    screen: button.QsWindow.window ? button.QsWindow.window.screen : null
+  }
+
+  function eachExpose(method) {
+    var items = instances()
+    for (var i = 0; i < items.length; i++) {
+      var overlay = items[i] ? items[i].exposeOverlay : null
+      if (overlay && typeof overlay[method] === "function") overlay[method]()
+    }
+  }
+
+  readonly property var exposeOverlay: expose
 
   BarIconButton {
     id: button

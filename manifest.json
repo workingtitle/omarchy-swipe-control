@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "workingtitle",
   "license": "MIT",
-  "description": "macOS-style trackpad gestures: swipe between workspaces, carry windows across them, open the Omarchy menu, and swipe through the bar popups",
+  "description": "macOS-style trackpad gestures for Omarchy: swipe between workspaces, Mission Control, drag windows across workspaces with Shift, and swipe through the bar popups",
   "kinds": [
     "bar-widget"
   ],
@@ -22,7 +22,7 @@
       "fingers": 3,
       "workspaceSwipe": true,
       "stopAtLastWorkspace": true,
-      "swipeUpMenu": true,
+      "swipeUpExpose": true,
       "swipeDownPanels": true,
       "startPanel": "last",
       "windowSwipe": true
@@ -47,9 +47,9 @@
         "defaultValue": true
       },
       {
-        "key": "swipeUpMenu",
+        "key": "swipeUpExpose",
         "type": "boolean",
-        "label": "Swipe up toggles the Omarchy menu",
+        "label": "Swipe up opens Mission Control",
         "defaultValue": true
       },
       {
