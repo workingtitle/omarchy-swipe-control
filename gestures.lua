@@ -9,15 +9,17 @@
 -- swipe cannot mean two things at once. Instead the gesture set is swapped:
 -- while a bar popup (layer "omarchy-keyboard-panel") is on screen, left/right
 -- step between popups and up closes it; otherwise left/right is the 1:1
--- workspace swipe, up opens the Omarchy menu and down opens a popup.
+-- workspace swipe, up toggles the Omarchy menu and down opens a popup.
 --
--- The other finger count (four when the main one is three, and the reverse)
--- moves the focused window to the neighbouring workspace and follows it.
+-- The same swipe with Shift held carries the focused window to the
+-- neighbouring workspace and follows it. Gestures with modifiers are matched
+-- separately, so this never collides with the plain swipe.
 
 local M = {}
 
 local SETTINGS_PATH = (os.getenv("HOME") or "") .. "/.local/state/omarchy/gestures-settings.lua"
 local PANEL_NAMESPACE = "omarchy-keyboard-panel"
+local MENU_NAMESPACE = "omarchy-menu"
 local IPC = "omarchy-shell -q io.github.workingtitle.gestures "
 
 local DEFAULTS = {
@@ -54,8 +56,8 @@ end
 
 -- The workspace next to the active one on the same monitor, in the direction
 -- given, skipping ids that do not exist the way the workspace swipe does.
--- Past the last one this is a fresh workspace, unless the swipe is set to stop
--- there too.
+-- Past the last one this is a fresh workspace: stopAtLastWorkspace is only for
+-- the plain swipe, since carrying a window onto a new workspace is useful.
 local function neighbour_workspace(direction)
   local active = hl.get_active_workspace()
   if not active or active.id < 1 then return nil end
@@ -70,9 +72,17 @@ local function neighbour_workspace(direction)
     end
   end
 
-  if best or M.settings.stopAtLastWorkspace then return best end
+  if best then return best end
   local fresh = active.id + direction
   return fresh >= 1 and fresh or nil
+end
+
+-- `omarchy-menu toggle` asks the shell whether the menu is open, and the shell
+-- keeps saying yes for a moment after the menu closed, so the next swipe up
+-- would do nothing. Whether the menu layer is on screen is the real answer.
+local function toggle_menu()
+  local open = #hl.get_layers({ namespace = MENU_NAMESPACE }) > 0
+  hl.dispatch(hl.dsp.exec_cmd(open and "omarchy-menu close" or "omarchy-menu summon"))
 end
 
 local function move_window(direction)
@@ -85,14 +95,14 @@ end
 
 -- Only gestures this file added are unset: Hyprland rejects unsetting one that
 -- does not exist, and a user's own gestures on other finger counts stay put.
-local function add(fingers, direction, action)
-  hl.gesture({ fingers = fingers, direction = direction, action = action })
-  table.insert(registered, { fingers = fingers, direction = direction })
+local function add(fingers, direction, action, mods)
+  hl.gesture({ fingers = fingers, direction = direction, action = action, mods = mods })
+  table.insert(registered, { fingers = fingers, direction = direction, mods = mods })
 end
 
 local function clear()
   for _, g in ipairs(registered) do
-    hl.gesture({ fingers = g.fingers, direction = g.direction, action = "unset" })
+    hl.gesture({ fingers = g.fingers, direction = g.direction, action = "unset", mods = g.mods })
   end
   registered = {}
 end
@@ -105,12 +115,11 @@ local function apply()
 
   hl.config({ gestures = { workspace_swipe_create_new = not s.stopAtLastWorkspace } })
 
-  -- Same sense as the workspace swipe: fingers left brings in what is on the
-  -- right.
+  -- Opposite sense to the workspace swipe: the window is dragged along with
+  -- the fingers, so fingers right carries it to the workspace on the right.
   if s.windowSwipe then
-    local wf = f == 3 and 4 or 3
-    add(wf, "left", move_window(1))
-    add(wf, "right", move_window(-1))
+    add(f, "right", move_window(1), "SHIFT")
+    add(f, "left", move_window(-1), "SHIFT")
   end
 
   if panel_mode and s.swipeDownPanels then
@@ -123,7 +132,7 @@ local function apply()
   end
 
   if s.workspaceSwipe then add(f, "horizontal", "workspace") end
-  if s.swipeUpMenu then add(f, "up", run("omarchy-menu summon")) end
+  if s.swipeUpMenu then add(f, "up", toggle_menu) end
   if s.swipeDownPanels then add(f, "down", run(IPC .. "openPanel")) end
 end
 
@@ -136,12 +145,13 @@ end
 -- For `hyprctl repl 'return OmarchyGestures.describe()'`.
 function M.describe()
   local parts = {}
-  for _, g in ipairs(registered) do table.insert(parts, g.fingers .. ":" .. g.direction) end
+  for _, g in ipairs(registered) do table.insert(parts, g.fingers .. ":" .. (g.mods and g.mods .. "+" or "") .. g.direction) end
   return (panel_mode and "popup" or "normal") .. " " .. table.concat(parts, ",")
 end
 
--- Exposed for testing: `hyprctl repl 'return OmarchyGestures.neighbour_workspace(1)'`.
+-- Exposed for testing, e.g. `hyprctl eval 'OmarchyGestures.toggle_menu()'`.
 M.neighbour_workspace = neighbour_workspace
+M.toggle_menu = toggle_menu
 
 function M.reload()
   M.settings = load_settings()

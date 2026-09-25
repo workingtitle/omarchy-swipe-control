@@ -247,14 +247,13 @@ Panel {
     { key: "stopAtLastWorkspace", kind: "toggle", label: "Stop at the last workspace",
       description: "Otherwise swiping past it creates a new, empty one" },
     { key: "swipeUpMenu", kind: "toggle", label: "Swipe up opens the menu",
-      description: "The Omarchy menu; with a bar popup open, up closes it" },
+      description: "Swipe up again to close it, or a bar popup" },
     { key: "swipeDownPanels", kind: "toggle", label: "Swipe down opens bar popups",
       description: "Then swipe left and right to move between them" },
     { key: "startPanel", kind: "choice", label: "Popup to open",
       options: [{ value: "last", label: "Last used" }, { value: "first", label: "First" }] },
-    { key: "windowSwipe", kind: "toggle",
-      label: (fingers === 3 ? "Four" : "Three") + " fingers move the window",
-      description: "Left and right carry the focused window to the next workspace" }
+    { key: "windowSwipe", kind: "toggle", label: "Shift + swipe moves the window",
+      description: "Drags the focused window to the next workspace, even past the last" }
   ]
 
   function rowValue(row) {
