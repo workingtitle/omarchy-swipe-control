@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.workingtitle.gestures",
+  "name": "Trackpad Gestures",
+  "version": "1.0.0",
+  "author": "workingtitle",
+  "license": "MIT",
+  "description": "macOS-style trackpad gestures: swipe between workspaces, carry windows across them, open the Omarchy menu, and swipe through the bar popups",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Trackpad Gestures",
+    "description": "Gesture settings and bar popup navigation",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "fingers": 3,
+      "workspaceSwipe": true,
+      "stopAtLastWorkspace": true,
+      "swipeUpMenu": true,
+      "swipeDownPanels": true,
+      "startPanel": "last",
+      "windowSwipe": true
+    },
+    "schema": [
+      {
+        "key": "fingers",
+        "type": "number",
+        "label": "Fingers",
+        "defaultValue": 3
+      },
+      {
+        "key": "workspaceSwipe",
+        "type": "boolean",
+        "label": "Swipe between workspaces",
+        "defaultValue": true
+      },
+      {
+        "key": "stopAtLastWorkspace",
+        "type": "boolean",
+        "label": "Stop at the last workspace",
+        "defaultValue": true
+      },
+      {
+        "key": "swipeUpMenu",
+        "type": "boolean",
+        "label": "Swipe up opens the Omarchy menu",
+        "defaultValue": true
+      },
+      {
+        "key": "swipeDownPanels",
+        "type": "boolean",
+        "label": "Swipe down opens bar popups",
+        "defaultValue": true
+      },
+      {
+        "key": "startPanel",
+        "type": "string",
+        "label": "Popup to open: last or first",
+        "defaultValue": "last"
+      },
+      {
+        "key": "windowSwipe",
+        "type": "boolean",
+        "label": "The other finger count moves the focused window to the next workspace",
+        "defaultValue": true
+      }
+    ]
+  }
+}
