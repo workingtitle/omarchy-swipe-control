@@ -33,10 +33,13 @@ of the active workspace spread out below, with live previews.
 - Drag a window onto a workspace thumbnail to move it there.
 - Escape, a click on empty space, or swiping down closes it.
 
-Open it without the gesture:
+Open it without the gesture, for example from a keybinding in
+`~/.config/hypr/bindings.lua` (XF86LaunchA is the Mission Control key on Mac
+keyboards):
 
-```sh
-omarchy-shell io.github.workingtitle.gestures toggleExpose
+```lua
+o.bind("XF86LaunchA", "Mission Control", "omarchy-shell -q io.github.workingtitle.gestures toggleExpose")
+o.bind("SUPER + E", "Mission Control", "omarchy-shell -q io.github.workingtitle.gestures toggleExpose")
 ```
 
 ## Requirements
@@ -89,7 +92,7 @@ opens or closes. Popup navigation runs through the
 plugin's IPC target:
 
 ```sh
-omarchy-shell io.github.workingtitle.gestures openPanel|next|previous|closePanel|current|expose|closeExpose|toggleExpose
+omarchy-shell io.github.workingtitle.gestures openPanel|next|previous|closePanel|current|expose|closeExpose|toggleExpose|exposeState
 ```
 
 To see which gestures are active:

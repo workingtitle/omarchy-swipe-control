@@ -234,6 +234,15 @@ Panel {
     function expose(): void { root.eachExpose("show") }
     function closeExpose(): void { root.eachExpose("hide") }
     function toggleExpose(): void { root.eachExpose("toggle") }
+    function exposeState(): string {
+      var items = root.instances()
+      var out = []
+      for (var i = 0; i < items.length; i++) {
+        var o = items[i] ? items[i].exposeOverlay : null
+        out.push(o ? { screen: o.screen ? o.screen.name : "", open: o.open, shown: o.shown } : null)
+      }
+      return JSON.stringify(out)
+    }
     function current(): string {
       var slot = root.openSlot()
       return slot ? slot.moduleName : ""
