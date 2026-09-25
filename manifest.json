@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "id": "io.github.workingtitle.gestures",
-  "name": "Trackpad Gestures",
+  "name": "Swipe Control",
   "version": "1.0.0",
   "author": "workingtitle",
   "license": "MIT",
-  "description": "macOS-style trackpad gestures for Omarchy: swipe between workspaces, Mission Control, drag windows across workspaces with Shift, and swipe through the bar popups",
+  "description": "macOS-style trackpad control for Omarchy: 1:1 workspace swipes, Mission Control with live previews on swipe up, a Control Center-style swipe through the bar's popups, and Shift + swipe to carry windows between workspaces.",
   "kinds": [
     "bar-widget"
   ],
@@ -13,9 +13,9 @@
     "barWidget": "Panel.qml"
   },
   "barWidget": {
-    "displayName": "Trackpad Gestures",
-    "description": "Gesture settings and bar popup navigation",
-    "category": "System",
+    "displayName": "Swipe Control",
+    "description": "Trackpad gestures, Mission Control and bar popup navigation, with a settings popup",
+    "category": "Desktop",
     "allowMultiple": false,
     "defaultSection": "right",
     "defaults": {
@@ -25,7 +25,8 @@
       "swipeUpExpose": true,
       "swipeDownPanels": true,
       "startPanel": "last",
-      "windowSwipe": true
+      "windowSwipe": true,
+      "popupArrowKeys": true
     },
     "schema": [
       {
@@ -68,6 +69,12 @@
         "key": "windowSwipe",
         "type": "boolean",
         "label": "Shift + swipe moves the focused window to the next workspace",
+        "defaultValue": true
+      },
+      {
+        "key": "popupArrowKeys",
+        "type": "boolean",
+        "label": "While a bar popup is open, Super + left/right switch popups instead of window focus",
         "defaultValue": true
       }
     ]

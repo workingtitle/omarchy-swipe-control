@@ -5,8 +5,8 @@ import Quickshell.Io
 import qs.Commons
 import qs.Ui
 
-// Trackpad gestures: a settings popup in the bar, plus the popup navigation
-// the Hyprland side (gestures.lua) calls over IPC while a bar popup is open.
+// Swipe Control: a settings popup in the bar, plus the popup navigation the
+// Hyprland side (gestures.lua) calls over IPC while a bar popup is open.
 //
 // The plugin API only lets a widget see its own id, so the popups of the other
 // widgets are found through the bar's ModuleSlot items, which every widget
@@ -19,7 +19,7 @@ Panel {
   manageIpc: false
 
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy"
-  readonly property string hyprSettingsPath: stateDir + "/gestures-settings.lua"
+  readonly property string hyprSettingsPath: stateDir + "/gestures-settings.conf"
   readonly property string lastPanelPath: stateDir + "/gestures-last-panel"
 
   readonly property int fingers: setting("fingers", 3) === 4 ? 4 : 3
@@ -28,6 +28,7 @@ Panel {
   readonly property bool swipeUpExpose: setting("swipeUpExpose", true) === true
   readonly property bool swipeDownPanels: setting("swipeDownPanels", true) === true
   readonly property bool windowSwipe: setting("windowSwipe", true) === true
+  readonly property bool popupArrowKeys: setting("popupArrowKeys", true) === true
   readonly property string startPanel: setting("startPanel", "last") === "first" ? "first" : "last"
 
   property string lastPanel: ""
@@ -54,6 +55,7 @@ Panel {
       swipeUpExpose: swipeUpExpose,
       swipeDownPanels: swipeDownPanels,
       windowSwipe: windowSwipe,
+      popupArrowKeys: popupArrowKeys,
       startPanel: startPanel
     }
   }
@@ -66,16 +68,16 @@ Panel {
       shellApi.updateEntryInline(moduleName, next)
   }
 
+  // Plain key=value lines: gestures.lua parses them and never runs them as code.
   function hyprSettingsText() {
-    return "-- Written by the io.github.workingtitle.gestures shell plugin.\n"
-      + "return {\n"
-      + "  fingers = " + fingers + ",\n"
-      + "  workspaceSwipe = " + workspaceSwipe + ",\n"
-      + "  stopAtLastWorkspace = " + stopAtLastWorkspace + ",\n"
-      + "  swipeUpExpose = " + swipeUpExpose + ",\n"
-      + "  swipeDownPanels = " + swipeDownPanels + ",\n"
-      + "  windowSwipe = " + windowSwipe + ",\n"
-      + "}\n"
+    return "# Written by the Swipe Control plugin (io.github.workingtitle.gestures).\n"
+      + "fingers=" + fingers + "\n"
+      + "workspaceSwipe=" + workspaceSwipe + "\n"
+      + "stopAtLastWorkspace=" + stopAtLastWorkspace + "\n"
+      + "swipeUpExpose=" + swipeUpExpose + "\n"
+      + "swipeDownPanels=" + swipeDownPanels + "\n"
+      + "windowSwipe=" + windowSwipe + "\n"
+      + "popupArrowKeys=" + popupArrowKeys + "\n"
   }
 
   // Every per-monitor instance sees the same settings, so writing an identical
@@ -266,7 +268,9 @@ Panel {
     { key: "startPanel", kind: "choice", label: "Popup to open",
       options: [{ value: "last", label: "Last used" }, { value: "first", label: "First" }] },
     { key: "windowSwipe", kind: "toggle", label: "Shift + swipe moves the window",
-      description: "Drags the focused window to the next workspace, even past the last" }
+      description: "Drags the focused window to the next workspace, even past the last" },
+    { key: "popupArrowKeys", kind: "toggle", label: "Super + arrows switch popups",
+      description: "Takes over Super + left/right from window focus while a popup is open" }
   ]
 
   function rowValue(row) {
@@ -291,7 +295,57 @@ Panel {
     setChoice(row, options[next].value)
   }
 
-  onOpenedChanged: if (!opened) cursorIndex = -1
+  onOpenedChanged: {
+    if (!opened) cursorIndex = -1
+    else refreshSetup()
+  }
+
+  // ------------------------------------------------------------ Hyprland setup
+
+  // Hyprland loads gestures.lua from a marked block in ~/.config/hypr/input.lua.
+  // setup.sh adds or removes that block, and only when the buttons below are
+  // pressed. hyprSetup is "enabled", "manual" (a hand-written block) or
+  // "disabled"; hyprActive says whether Hyprland has the module loaded.
+  readonly property string setupScript: Qt.resolvedUrl("setup.sh").toString().replace("file://", "")
+  property string hyprSetup: ""
+  property bool hyprActive: true
+
+  function refreshSetup() {
+    if (!setupStatus.running) setupStatus.running = true
+    if (!hyprStatus.running) hyprStatus.running = true
+  }
+
+  function runSetup(action) {
+    if (setupAction.running) return
+    setupAction.command = ["bash", setupScript, action]
+    setupAction.running = true
+  }
+
+  Component.onCompleted: refreshSetup()
+
+  Process {
+    id: setupStatus
+    command: ["bash", root.setupScript, "status"]
+    stdout: StdioCollector { onStreamFinished: root.hyprSetup = text.trim() }
+  }
+
+  Process {
+    id: hyprStatus
+    command: ["hyprctl", "repl", "return type(OmarchyGestures)"]
+    stdout: StdioCollector { onStreamFinished: root.hyprActive = text.trim() === "table" }
+  }
+
+  Process {
+    id: setupAction
+    onExited: setupRefreshTimer.restart()
+  }
+
+  // setup.sh reloads Hyprland; give it a moment before asking again.
+  Timer {
+    id: setupRefreshTimer
+    interval: 600
+    onTriggered: root.refreshSetup()
+  }
 
   // ---------------------------------------------------------- Mission Control
 
@@ -318,7 +372,7 @@ Panel {
     bar: root.bar
     text: String.fromCodePoint(0xF0ABF)
     slotSize: Style.bar.iconSlot
-    tooltipText: "Trackpad gestures"
+    tooltipText: "Swipe Control"
     onPressed: function(b) { if (b === Qt.LeftButton) root.toggle() }
   }
 
@@ -355,11 +409,49 @@ Panel {
         spacing: Style.space(10)
 
         Text {
-          text: "TRACKPAD GESTURES"
+          text: "SWIPE CONTROL"
           color: root.foreground
           font.family: root.fontFamily
           font.pixelSize: Style.font.heading
           font.bold: true
+        }
+
+        Rectangle {
+          visible: !root.hyprActive
+          width: parent.width
+          implicitHeight: setupColumn.implicitHeight + Style.space(24)
+          radius: Style.cornerRadius
+          color: "transparent"
+          border.width: 1
+          border.color: Color.accent
+
+          Column {
+            id: setupColumn
+            anchors.fill: parent
+            anchors.margins: Style.space(12)
+            spacing: Style.space(8)
+
+            Text {
+              width: parent.width
+              wrapMode: Text.Wrap
+              text: root.hyprSetup === "disabled"
+                ? "Hyprland does not load the gestures yet. Enabling adds a marked block to ~/.config/hypr/input.lua (after a backup) and reloads Hyprland."
+                : "input.lua has the block, but Hyprland has not loaded it. Check hyprctl configerrors."
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+            }
+
+            Button {
+              visible: root.hyprSetup === "disabled"
+              text: setupAction.running ? "Enabling…" : "Enable in Hyprland"
+              bordered: true
+              enabled: !setupAction.running
+              foreground: root.foreground
+              fontFamily: root.fontFamily
+              onClicked: root.runSetup("enable")
+            }
+          }
         }
 
         Repeater {
@@ -425,6 +517,16 @@ Panel {
           color: root.dim
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption
+        }
+
+        Button {
+          visible: root.hyprSetup === "enabled"
+          text: setupAction.running ? "Removing…" : "Remove from Hyprland"
+          bordered: true
+          enabled: !setupAction.running
+          foreground: root.dim
+          fontFamily: root.fontFamily
+          onClicked: root.runSetup("disable")
         }
       }
     }

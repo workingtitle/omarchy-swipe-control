@@ -1,7 +1,9 @@
--- Trackpad gestures for the io.github.workingtitle.gestures shell plugin.
+-- Swipe Control: trackpad gestures for the io.github.workingtitle.gestures
+-- shell plugin.
 --
 -- Loaded from ~/.config/hypr/input.lua. Settings are written by the plugin's
--- bar popup to ~/.local/state/omarchy/gestures-settings.lua; the plugin calls
+-- bar popup to ~/.local/state/omarchy/gestures-settings.conf as plain
+-- key=value lines, which are parsed, never executed. The plugin calls
 -- OmarchyGestures.reload() through `hyprctl eval` after each change, so a
 -- settings tweak never needs a full Hyprland reload.
 --
@@ -18,7 +20,7 @@
 
 local M = {}
 
-local SETTINGS_PATH = (os.getenv("HOME") or "") .. "/.local/state/omarchy/gestures-settings.lua"
+local SETTINGS_PATH = (os.getenv("HOME") or "") .. "/.local/state/omarchy/gestures-settings.conf"
 local PANEL_NAMESPACE = "omarchy-keyboard-panel"
 local EXPOSE_NAMESPACE = "omarchy-gestures-expose"
 local IPC = "omarchy-shell -q io.github.workingtitle.gestures "
@@ -30,6 +32,7 @@ local DEFAULTS = {
   swipeUpExpose = true,
   swipeDownPanels = true,
   windowSwipe = true,
+  popupArrowKeys = true,
 }
 
 local registered = {}
@@ -41,11 +44,18 @@ local function load_settings()
   local settings = {}
   for key, value in pairs(DEFAULTS) do settings[key] = value end
 
-  local ok, loaded = pcall(dofile, SETTINGS_PATH)
-  if ok and type(loaded) == "table" then
-    for key, value in pairs(loaded) do
-      if DEFAULTS[key] ~= nil and type(value) == type(DEFAULTS[key]) then settings[key] = value end
+  local file = io.open(SETTINGS_PATH, "r")
+  if file then
+    for line in file:lines() do
+      local key, raw = line:match("^%s*([%a_]+)%s*=%s*(%S+)%s*$")
+      local default = key and DEFAULTS[key]
+      if type(default) == "boolean" and (raw == "true" or raw == "false") then
+        settings[key] = raw == "true"
+      elseif type(default) == "number" and tonumber(raw) then
+        settings[key] = tonumber(raw)
+      end
     end
+    file:close()
   end
 
   if settings.fingers ~= 3 and settings.fingers ~= 4 then settings.fingers = DEFAULTS.fingers end
@@ -188,7 +198,7 @@ local function update_mode()
   if next_mode == mode then return end
   mode = next_mode
   set_expose_blur(mode == "expose")
-  set_popup_keys(mode == "popup")
+  set_popup_keys(mode == "popup" and M.settings.popupArrowKeys)
   apply()
 end
 
@@ -204,6 +214,7 @@ M.neighbour_workspace = neighbour_workspace
 
 function M.reload()
   M.settings = load_settings()
+  set_popup_keys(mode == "popup" and M.settings.popupArrowKeys)
   apply()
 end
 
