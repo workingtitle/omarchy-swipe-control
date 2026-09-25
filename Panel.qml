@@ -22,7 +22,11 @@ Panel {
   readonly property string hyprSettingsPath: stateDir + "/gestures-settings.conf"
   readonly property string lastPanelPath: stateDir + "/gestures-last-panel"
 
-  readonly property int fingers: setting("fingers", 3) === 4 ? 4 : 3
+  // Three and four fingers can both be on; an entry from before that keeps
+  // its single "fingers" choice until the first change.
+  readonly property int legacyFingers: setting("fingers", 3) === 4 ? 4 : 3
+  readonly property bool threeFingers: setting("threeFingers", legacyFingers === 3) === true
+  readonly property bool fourFingers: setting("fourFingers", legacyFingers === 4) === true
   readonly property bool workspaceSwipe: setting("workspaceSwipe", true) === true
   readonly property bool stopAtLastWorkspace: setting("stopAtLastWorkspace", true) === true
   readonly property bool swipeUpExpose: setting("swipeUpExpose", true) === true
@@ -33,6 +37,8 @@ Panel {
 
   property string lastPanel: ""
   property int cursorIndex: -1
+  // Which chip of a multi-select row the keyboard cursor is on.
+  property int chipCursor: 0
 
   readonly property color foreground: bar ? bar.foreground : Color.foreground
   readonly property color dim: Qt.darker(foreground, 1.55)
@@ -49,7 +55,8 @@ Panel {
 
   function currentSettings() {
     return {
-      fingers: fingers,
+      threeFingers: threeFingers,
+      fourFingers: fourFingers,
       workspaceSwipe: workspaceSwipe,
       stopAtLastWorkspace: stopAtLastWorkspace,
       swipeUpExpose: swipeUpExpose,
@@ -71,7 +78,8 @@ Panel {
   // Plain key=value lines: gestures.lua parses them and never runs them as code.
   function hyprSettingsText() {
     return "# Written by the Swipe Control plugin (io.github.workingtitle.gestures).\n"
-      + "fingers=" + fingers + "\n"
+      + "threeFingers=" + threeFingers + "\n"
+      + "fourFingers=" + fourFingers + "\n"
       + "workspaceSwipe=" + workspaceSwipe + "\n"
       + "stopAtLastWorkspace=" + stopAtLastWorkspace + "\n"
       + "swipeUpExpose=" + swipeUpExpose + "\n"
@@ -255,8 +263,8 @@ Panel {
   // ---------------------------------------------------------------- popup UI
 
   readonly property var rows: [
-    { key: "fingers", kind: "choice", label: "Fingers",
-      options: [{ value: "3", label: "Three" }, { value: "4", label: "Four" }] },
+    { key: "fingers", kind: "multi", label: "Fingers",
+      options: [{ value: "threeFingers", label: "Three" }, { value: "fourFingers", label: "Four" }] },
     { key: "workspaceSwipe", kind: "toggle", label: "Swipe between workspaces",
       description: "Left and right follow your fingers, like Spaces on macOS" },
     { key: "stopAtLastWorkspace", kind: "toggle", label: "Stop at the last workspace",
@@ -274,11 +282,21 @@ Panel {
   ]
 
   function rowValue(row) {
-    return row.key === "fingers" ? String(fingers) : currentSettings()[row.key]
+    return currentSettings()[row.key]
   }
 
   function setChoice(row, value) {
-    updateSetting(row.key, row.key === "fingers" ? Number(value) : value)
+    updateSetting(row.key, value)
+  }
+
+  // Each chip of a multi-select row is its own boolean setting. The last one
+  // on stays on, so some gestures always remain.
+  function toggleChip(key) {
+    var current = currentSettings()
+    var on = 0
+    for (var k in { threeFingers: 1, fourFingers: 1 }) if (current[k]) on++
+    if (current[key] && on <= 1) return
+    updateSetting(key, !current[key])
   }
 
   function activateRow(index, delta) {
@@ -286,6 +304,10 @@ Panel {
     if (!row) return
     if (row.kind === "toggle") {
       updateSetting(row.key, !currentSettings()[row.key])
+      return
+    }
+    if (row.kind === "multi") {
+      toggleChip(row.options[Math.max(0, Math.min(row.options.length - 1, chipCursor))].value)
       return
     }
     var options = row.options
@@ -395,6 +417,9 @@ Panel {
             : Math.max(0, Math.min(root.rows.length - 1, root.cursorIndex + dy))
         } else if (dx !== 0 && root.cursorIndex >= 0 && root.rows[root.cursorIndex].kind === "choice") {
           root.activateRow(root.cursorIndex, dx)
+        } else if (dx !== 0 && root.cursorIndex >= 0 && root.rows[root.cursorIndex].kind === "multi") {
+          var count = root.rows[root.cursorIndex].options.length
+          root.chipCursor = Math.max(0, Math.min(count - 1, root.chipCursor + dx))
         }
       }
       onActivateRequested: if (root.cursorIndex >= 0) root.activateRow(root.cursorIndex, 1)
@@ -480,9 +505,9 @@ Panel {
 
             Item {
               id: choiceRow
-              visible: rowItem.modelData.kind === "choice"
+              visible: rowItem.modelData.kind === "choice" || rowItem.modelData.kind === "multi"
               width: parent.width
-              implicitHeight: Math.max(choiceLabel.implicitHeight, choices.implicitHeight)
+              implicitHeight: Math.max(choiceLabel.implicitHeight, choices.implicitHeight, chips.implicitHeight)
 
               Text {
                 id: choiceLabel
@@ -496,6 +521,7 @@ Panel {
 
               ButtonGroup {
                 id: choices
+                visible: rowItem.modelData.kind === "choice"
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 options: rowItem.modelData.options || []
@@ -505,6 +531,36 @@ Panel {
                 focusable: false
                 onChanged: function(value) { root.setChoice(rowItem.modelData, value) }
                 onHovered: function(i, isHovered) { if (isHovered) root.cursorIndex = rowItem.index }
+              }
+
+              // Like the ButtonGroup chips, but every chip toggles on its own.
+              Row {
+                id: chips
+                visible: rowItem.modelData.kind === "multi"
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Style.space(8)
+
+                Repeater {
+                  model: rowItem.modelData.kind === "multi" ? rowItem.modelData.options : []
+
+                  delegate: Button {
+                    required property var modelData
+                    required property int index
+                    text: modelData.label
+                    selected: root.currentSettings()[modelData.value] === true
+                    hasCursor: root.cursorIndex === rowItem.index && root.chipCursor === index
+                    bordered: true
+                    foreground: root.foreground
+                    fontFamily: root.fontFamily
+                    onClicked: root.toggleChip(modelData.value)
+                    onHovered: function(isHovered) {
+                      if (!isHovered) return
+                      root.cursorIndex = rowItem.index
+                      root.chipCursor = index
+                    }
+                  }
+                }
               }
             }
           }

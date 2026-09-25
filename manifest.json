@@ -19,7 +19,8 @@
     "allowMultiple": false,
     "defaultSection": "right",
     "defaults": {
-      "fingers": 3,
+      "threeFingers": true,
+      "fourFingers": false,
       "workspaceSwipe": true,
       "stopAtLastWorkspace": true,
       "swipeUpExpose": true,
@@ -30,10 +31,16 @@
     },
     "schema": [
       {
-        "key": "fingers",
-        "type": "number",
-        "label": "Fingers",
-        "defaultValue": 3
+        "key": "threeFingers",
+        "type": "boolean",
+        "label": "Three-finger gestures",
+        "defaultValue": true
+      },
+      {
+        "key": "fourFingers",
+        "type": "boolean",
+        "label": "Four-finger gestures",
+        "defaultValue": false
       },
       {
         "key": "workspaceSwipe",

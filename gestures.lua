@@ -26,7 +26,8 @@ local EXPOSE_NAMESPACE = "omarchy-gestures-expose"
 local IPC = "omarchy-shell -q io.github.workingtitle.gestures "
 
 local DEFAULTS = {
-  fingers = 3,
+  threeFingers = true,
+  fourFingers = false,
   workspaceSwipe = true,
   stopAtLastWorkspace = true,
   swipeUpExpose = true,
@@ -49,7 +50,11 @@ local function load_settings()
     for line in file:lines() do
       local key, raw = line:match("^%s*([%a_]+)%s*=%s*(%S+)%s*$")
       local default = key and DEFAULTS[key]
-      if type(default) == "boolean" and (raw == "true" or raw == "false") then
+      -- Settings from before three and four fingers could both be on.
+      if key == "fingers" and (raw == "3" or raw == "4") then
+        settings.threeFingers = raw == "3"
+        settings.fourFingers = raw == "4"
+      elseif type(default) == "boolean" and (raw == "true" or raw == "false") then
         settings[key] = raw == "true"
       elseif type(default) == "number" and tonumber(raw) then
         settings[key] = tonumber(raw)
@@ -58,7 +63,7 @@ local function load_settings()
     file:close()
   end
 
-  if settings.fingers ~= 3 and settings.fingers ~= 4 then settings.fingers = DEFAULTS.fingers end
+  if not settings.threeFingers and not settings.fourFingers then settings.threeFingers = true end
   return settings
 end
 
@@ -111,14 +116,9 @@ local function clear()
   registered = {}
 end
 
-local function apply()
-  clear()
-
-  local s = M.settings
-  local f = s.fingers
-
-  hl.config({ gestures = { workspace_swipe_create_new = not s.stopAtLastWorkspace } })
-
+-- The whole gesture set for one finger count; three and four fingers can both
+-- be on, and then each gets its own copy.
+local function apply_fingers(f, s)
   -- Opposite sense to the workspace swipe: the window is dragged along with
   -- the fingers, so fingers right carries it to the workspace on the right.
   if s.windowSwipe then
@@ -145,6 +145,16 @@ local function apply()
   if s.workspaceSwipe then add(f, "horizontal", "workspace") end
   if s.swipeUpExpose then add(f, "up", run(IPC .. "expose")) end
   if s.swipeDownPanels then add(f, "down", run(IPC .. "openPanel")) end
+end
+
+local function apply()
+  clear()
+
+  local s = M.settings
+  hl.config({ gestures = { workspace_swipe_create_new = not s.stopAtLastWorkspace } })
+
+  if s.threeFingers then apply_fingers(3, s) end
+  if s.fourFingers then apply_fingers(4, s) end
 end
 
 -- Omarchy turns blur off globally, and a layer rule cannot blur on its own, so

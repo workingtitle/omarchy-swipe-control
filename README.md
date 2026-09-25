@@ -12,7 +12,7 @@ workspace. Every gesture can be switched off in a settings popup in the bar.
 
 ## Gestures
 
-| Three fingers (or four, see Settings) | Normally | While a bar popup is open | While Mission Control is open |
+| Three fingers, four, or both (see Settings) | Normally | While a bar popup is open | While Mission Control is open |
 |---|---|---|---|
 | Left / right | Switch workspace, 1:1 with your fingers | Step to the neighbouring popup | Switch workspace |
 | Shift + left / right | Carry the focused window to the workspace on that side | same | same |
@@ -60,7 +60,7 @@ Check first that the keys are free on your system: `omarchy menu keybindings --p
 
 - Omarchy with the plugin-capable shell (Quattro) and Hyprland 0.55 or newer
   with the Lua config
-- A touchpad with three- or four-finger gestures
+- A touchpad with three- and/or four-finger gestures
 - No other packages. The plugin uses `hyprctl`, `bash` and the standard
   command-line tools that Omarchy ships.
 
@@ -100,7 +100,8 @@ Click the icon in the bar. Changes apply at once, without reloading Hyprland.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `fingers` | `3` | Fingers for all gestures (3 or 4) |
+| `threeFingers` | `true` | The gestures work with three fingers |
+| `fourFingers` | `false` | The gestures work with four fingers; both can be on, at least one stays on |
 | `workspaceSwipe` | `true` | Left/right switches workspaces |
 | `stopAtLastWorkspace` | `true` | The workspace swipe stops at the last workspace instead of creating an empty one |
 | `swipeUpExpose` | `true` | Up opens Mission Control |
