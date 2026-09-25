@@ -140,6 +140,7 @@ function M.describe()
   return (panel_mode and "popup" or "normal") .. " " .. table.concat(parts, ",")
 end
 
+-- Exposed for testing: `hyprctl repl 'return OmarchyGestures.neighbour_workspace(1)'`.
 M.neighbour_workspace = neighbour_workspace
 
 function M.reload()

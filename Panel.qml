@@ -206,6 +206,8 @@ Panel {
   FileView {
     id: lastPanelFile
     path: root.lastPanelPath
+    // A swipe right after the shell starts must already see the last popup.
+    blockLoading: true
     atomicWrites: true
     printErrors: false
     onLoaded: root.lastPanel = text().trim()
