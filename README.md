@@ -24,8 +24,12 @@ swipe is set to stop there.
 Each monitor shows its workspaces as thumbnails along the top and the windows
 of the active workspace spread out below, with live previews.
 
-- Click a window to focus it, or pick one with the arrow keys and Enter.
-- Click a workspace thumbnail to switch to it.
+- Click a window to focus it, or pick one with Tab or the up and down arrows
+  and press Enter.
+- Click a workspace thumbnail to switch to it, or step through the workspaces
+  with the left and right arrows; Enter closes Mission Control there.
+- The desktop behind is blurred. Omarchy turns blur off, so it is switched on
+  only while Mission Control is open and restored afterwards.
 - Drag a window onto a workspace thumbnail to move it there.
 - Escape, a click on empty space, or swiping down closes it.
 

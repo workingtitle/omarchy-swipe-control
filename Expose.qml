@@ -63,6 +63,16 @@ Scope {
     hide()
   }
 
+  // Switches the workspace shown without leaving Mission Control. Stops at
+  // either end of the strip.
+  function stepWorkspace(delta) {
+    var index = workspaces.indexOf(activeWorkspace)
+    var target = workspaces[index + delta]
+    if (index < 0 || !target) return
+    selected = -1
+    dispatch("hl.dsp.focus({ workspace = \"" + target.id + "\" })")
+  }
+
   // Hyprland only moves the focused window, so focus it first. The overlay
   // stays open, and the tile leaves the grid once Hyprland reports the move.
   function moveWindow(toplevel, workspace) {
@@ -207,15 +217,23 @@ Scope {
       anchors.fill: parent
       focus: true
 
+      // Left/right walk the workspace strip, the other keys the windows of
+      // the workspace shown. Enter focuses the picked window, or with none
+      // picked closes Mission Control on the workspace shown.
       Keys.onPressed: function(event) {
         var n = root.windows.length
-        if (event.key === Qt.Key_Escape) root.hide()
-        else if ((event.key === Qt.Key_Right || event.key === Qt.Key_Tab || event.key === Qt.Key_L) && n > 0)
+        var key = event.key
+        if (key === Qt.Key_Escape) root.hide()
+        else if (key === Qt.Key_Left || key === Qt.Key_H) root.stepWorkspace(-1)
+        else if (key === Qt.Key_Right || key === Qt.Key_L) root.stepWorkspace(1)
+        else if ((key === Qt.Key_Tab || key === Qt.Key_Down || key === Qt.Key_J) && n > 0)
           root.selected = (root.selected + 1) % n
-        else if ((event.key === Qt.Key_Left || event.key === Qt.Key_Backtab || event.key === Qt.Key_H) && n > 0)
-          root.selected = (root.selected - 1 + n) % n
-        else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && root.selected >= 0 && root.selected < n)
-          root.focusWindow(root.windows[root.selected])
+        else if ((key === Qt.Key_Backtab || key === Qt.Key_Up || key === Qt.Key_K) && n > 0)
+          root.selected = root.selected < 0 ? n - 1 : (root.selected - 1 + n) % n
+        else if (key === Qt.Key_Return || key === Qt.Key_Enter) {
+          if (root.selected >= 0 && root.selected < n) root.focusWindow(root.windows[root.selected])
+          else root.hide()
+        }
         else return
         event.accepted = true
       }

@@ -137,12 +137,30 @@ local function apply()
   if s.swipeDownPanels then add(f, "down", run(IPC .. "openPanel")) end
 end
 
+-- Omarchy turns blur off globally, and a layer rule cannot blur on its own, so
+-- blur is switched on only while Mission Control is on screen and the user's
+-- values are put back afterwards.
+local EXPOSE_BLUR = { enabled = true, size = 10, passes = 3 }
+local saved_blur
+
+local function set_expose_blur(on)
+  if on and not saved_blur then
+    saved_blur = {}
+    for key in pairs(EXPOSE_BLUR) do saved_blur[key] = hl.get_config("decoration.blur." .. key) end
+    hl.config({ decoration = { blur = EXPOSE_BLUR } })
+  elseif not on and saved_blur then
+    hl.config({ decoration = { blur = saved_blur } })
+    saved_blur = nil
+  end
+end
+
 local function update_mode()
   local next_mode = "normal"
   if next(open_layers[EXPOSE_NAMESPACE]) then next_mode = "expose"
   elseif next(open_layers[PANEL_NAMESPACE]) then next_mode = "popup" end
   if next_mode == mode then return end
   mode = next_mode
+  set_expose_blur(mode == "expose")
   apply()
 end
 
