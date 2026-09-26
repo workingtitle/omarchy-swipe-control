@@ -194,6 +194,14 @@ Scope {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
 
     readonly property real stripHeight: Math.round(height * 0.14)
+    readonly property real stripSpacing: Math.round(margin * 0.4)
+    // Thumbnails shrink once there are too many workspaces to fit the strip
+    // at full height, so the outer ones never run off the screen.
+    readonly property real thumbHeight: {
+      var n = Math.max(1, root.workspaces.length)
+      var fitWidth = (width - margin * 2 - stripSpacing * (n - 1)) / n
+      return Math.min(stripHeight, Math.floor(fitWidth * height / Math.max(1, width)))
+    }
     readonly property real margin: Math.round(width * 0.04)
     readonly property rect gridArea: Qt.rect(margin, stripHeight + margin * 1.4,
       width - margin * 2, height - stripHeight - margin * 2.4)
@@ -257,7 +265,7 @@ Scope {
         id: strip
         anchors.horizontalCenter: parent.horizontalCenter
         y: root.shown ? overlay.margin * 0.5 : -overlay.stripHeight
-        spacing: Math.round(overlay.margin * 0.4)
+        spacing: overlay.stripSpacing
         Behavior on y { NumberAnimation { duration: root.animationMs; easing.type: Easing.OutCubic } }
 
         Repeater {
@@ -272,7 +280,7 @@ Scope {
               && overlay.workspaceAt(overlay.dragPoint.x, overlay.dragPoint.y) === modelData
             readonly property real ratio: height / Math.max(1, overlay.height)
 
-            height: overlay.stripHeight
+            height: overlay.thumbHeight
             width: Math.round(height * overlay.width / Math.max(1, overlay.height))
 
             Rectangle {

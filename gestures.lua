@@ -34,6 +34,7 @@ local DEFAULTS = {
   swipeDownPanels = true,
   windowSwipe = true,
   popupArrowKeys = true,
+  resizeOnEdges = true,
 }
 
 local registered = {}
@@ -222,8 +223,34 @@ end
 -- Exposed for testing: `hyprctl repl 'return OmarchyGestures.neighbour_workspace(1)'`.
 M.neighbour_workspace = neighbour_workspace
 
+-- Resize windows by dragging their edges and corners, as on macOS. Omarchy
+-- turns this off; while the setting is on, it is switched on with a grab zone
+-- wide enough to hit the edge inside the gap, and switching the setting off
+-- puts the previous values back.
+local EDGE_GRAB_AREA = 20
+local saved_edges
+
+local function set_resize_on_edges(on)
+  if on then
+    if not saved_edges then
+      saved_edges = {
+        resize_on_border = hl.get_config("general.resize_on_border"),
+        extend_border_grab_area = hl.get_config("general.extend_border_grab_area"),
+      }
+    end
+    hl.config({ general = {
+      resize_on_border = true,
+      extend_border_grab_area = math.max(tonumber(saved_edges.extend_border_grab_area) or 0, EDGE_GRAB_AREA),
+    } })
+  elseif saved_edges then
+    hl.config({ general = saved_edges })
+    saved_edges = nil
+  end
+end
+
 function M.reload()
   M.settings = load_settings()
+  set_resize_on_edges(M.settings.resizeOnEdges)
   set_popup_keys(mode == "popup" and M.settings.popupArrowKeys)
   apply()
 end

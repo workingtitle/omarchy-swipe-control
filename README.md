@@ -6,7 +6,8 @@ Swipe between workspaces with the page following your fingers. Swipe up for
 Mission Control with live window previews. Swipe down to open the popups on
 the right of the bar and swipe sideways through them, like Control Center.
 Hold Shift while swiping to carry the focused window along to the next
-workspace. Every gesture can be switched off in a settings popup in the bar.
+workspace, and resize windows by dragging their edges and corners. Every
+gesture can be switched off in a settings popup in the bar.
 
 ![Swipe Control settings popup](preview.png)
 
@@ -35,6 +36,15 @@ behind is blurred.
   left and right arrows; Enter closes Mission Control there.
 - Drag a window onto a workspace thumbnail to move it there.
 - Swipe down, press Escape, or click empty space to close it.
+
+## Resizing windows
+
+With **Drag edges to resize** on, point at a window's edge or corner until the
+cursor turns into a resize arrow, then click and drag, as on macOS. For tiled
+windows this moves the split to the neighbour. Omarchy turns Hyprland's
+`resize_on_border` off; the plugin turns it on with a 20 px grab zone, so the
+edge is easy to hit inside the gap, and puts the previous values back when the
+setting is switched off.
 
 ## Keyboard
 
@@ -109,6 +119,7 @@ Click the icon in the bar. Changes apply at once, without reloading Hyprland.
 | `startPanel` | `"last"` | Popup that down opens: `"last"` used or `"first"` |
 | `windowSwipe` | `true` | Shift + swipe moves the focused window |
 | `popupArrowKeys` | `true` | Super + left/right switch popups while one is open |
+| `resizeOnEdges` | `true` | Resize windows by dragging their edges and corners |
 
 The settings live on the widget's entry in `~/.config/omarchy/shell.json`. For
 Hyprland they are mirrored as plain `key=value` lines to

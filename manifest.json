@@ -27,7 +27,8 @@
       "swipeDownPanels": true,
       "startPanel": "last",
       "windowSwipe": true,
-      "popupArrowKeys": true
+      "popupArrowKeys": true,
+      "resizeOnEdges": true
     },
     "schema": [
       {
@@ -82,6 +83,12 @@
         "key": "popupArrowKeys",
         "type": "boolean",
         "label": "While a bar popup is open, Super + left/right switch popups instead of window focus",
+        "defaultValue": true
+      },
+      {
+        "key": "resizeOnEdges",
+        "type": "boolean",
+        "label": "Resize windows by dragging their edges and corners",
         "defaultValue": true
       }
     ]

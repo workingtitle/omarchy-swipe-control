@@ -33,6 +33,7 @@ Panel {
   readonly property bool swipeDownPanels: setting("swipeDownPanels", true) === true
   readonly property bool windowSwipe: setting("windowSwipe", true) === true
   readonly property bool popupArrowKeys: setting("popupArrowKeys", true) === true
+  readonly property bool resizeOnEdges: setting("resizeOnEdges", true) === true
   readonly property string startPanel: setting("startPanel", "last") === "first" ? "first" : "last"
 
   property string lastPanel: ""
@@ -63,6 +64,7 @@ Panel {
       swipeDownPanels: swipeDownPanels,
       windowSwipe: windowSwipe,
       popupArrowKeys: popupArrowKeys,
+      resizeOnEdges: resizeOnEdges,
       startPanel: startPanel
     }
   }
@@ -86,6 +88,7 @@ Panel {
       + "swipeDownPanels=" + swipeDownPanels + "\n"
       + "windowSwipe=" + windowSwipe + "\n"
       + "popupArrowKeys=" + popupArrowKeys + "\n"
+      + "resizeOnEdges=" + resizeOnEdges + "\n"
   }
 
   // Every per-monitor instance sees the same settings, so writing an identical
@@ -275,6 +278,8 @@ Panel {
       description: "Then swipe left and right to move between them" },
     { key: "startPanel", kind: "choice", label: "Popup to open",
       options: [{ value: "last", label: "Last used" }, { value: "first", label: "First" }] },
+    { key: "resizeOnEdges", kind: "toggle", label: "Drag edges to resize",
+      description: "Pull a window's edge or corner, like on macOS" },
     { key: "windowSwipe", kind: "toggle", label: "Shift + swipe moves the window",
       description: "Drags the focused window to the next workspace, even past the last" },
     { key: "popupArrowKeys", kind: "toggle", label: "Super + arrows switch popups",
