@@ -228,7 +228,89 @@ M.neighbour_workspace = neighbour_workspace
 -- wide enough to hit the edge inside the gap, and switching the setting off
 -- puts the previous values back.
 local EDGE_GRAB_AREA = 20
+-- Hyprland's corner zone: rounding + border + 10 px, and Omarchy has no
+-- rounding.
+local EDGE_CORNER = 12
+-- A tiled edge this close to the usable area's border sits against the
+-- screen edge or the bar and has nothing to trade space with.
+local EDGE_SCREEN_TOLERANCE = 40
 local saved_edges
+local edge_icon
+local edge_timer
+
+local function xy(v)
+  if type(v) ~= "table" then return 0, 0 end
+  return v.x or v[1] or 0, v.y or v[2] or 0
+end
+
+-- Hyprland shows the resize cursor on every edge, also where a tiled window
+-- touches the screen and cannot be resized. Whether the cursor is on such an
+-- edge decides if the resize cursor may show.
+local function edge_icon_allowed()
+  local cursor = hl.get_cursor_pos()
+  local monitor = hl.get_monitor_at_cursor()
+  if not cursor or not monitor then return true end
+
+  local workspace = monitor.active_workspace
+  local scale = monitor.scale or 1
+  local reserved = type(monitor.reserved) == "table" and monitor.reserved or {}
+  local area = {
+    l = monitor.x + (reserved.left or 0),
+    t = monitor.y + (reserved.top or 0),
+    r = monitor.x + monitor.width / scale - (reserved.right or 0),
+    b = monitor.y + monitor.height / scale - (reserved.bottom or 0),
+  }
+
+  local grab = EDGE_GRAB_AREA + (tonumber(hl.get_config("general.border_size")) or 0)
+  local cx, cy = cursor.x, cursor.y
+  local found
+  for _, w in ipairs(hl.get_windows()) do
+    if w.mapped and not w.hidden and w.workspace and workspace and w.workspace.id == workspace.id then
+      local x, y = xy(w.at)
+      local width, height = xy(w.size)
+      if cx >= x - grab and cx <= x + width + grab and cy >= y - grab and cy <= y + height + grab then
+        if not found or (w.floating and not found.floating) then
+          found = { floating = w.floating, x = x, y = y, w = width, h = height }
+        end
+      end
+    end
+  end
+  if not found or found.floating then return true end
+
+  local f = found
+  if cx >= f.x and cx <= f.x + f.w and cy >= f.y and cy <= f.y + f.h then return true end
+
+  local sides = {}
+  if cx < f.x + EDGE_CORNER then sides.l = true elseif cx > f.x + f.w - EDGE_CORNER then sides.r = true end
+  if cy < f.y + EDGE_CORNER then sides.t = true elseif cy > f.y + f.h - EDGE_CORNER then sides.b = true end
+
+  local stuck = {
+    l = f.x - area.l <= EDGE_SCREEN_TOLERANCE,
+    r = area.r - (f.x + f.w) <= EDGE_SCREEN_TOLERANCE,
+    t = f.y - area.t <= EDGE_SCREEN_TOLERANCE,
+    b = area.b - (f.y + f.h) <= EDGE_SCREEN_TOLERANCE,
+  }
+  -- A corner counts as resizable when either of its sides is.
+  for side in pairs(sides) do
+    if not stuck[side] then return true end
+  end
+  return next(sides) == nil
+end
+
+local last_cursor
+
+local function update_edge_icon()
+  -- Nothing to decide while the pointer rests.
+  local cursor = hl.get_cursor_pos()
+  local key = cursor and (math.floor(cursor.x) .. "," .. math.floor(cursor.y)) or ""
+  if key == last_cursor and edge_icon ~= nil then return end
+  last_cursor = key
+
+  local allowed = edge_icon_allowed()
+  if allowed == edge_icon then return end
+  edge_icon = allowed
+  hl.config({ general = { hover_icon_on_border = allowed } })
+end
 
 local function set_resize_on_edges(on)
   if on then
@@ -236,13 +318,22 @@ local function set_resize_on_edges(on)
       saved_edges = {
         resize_on_border = hl.get_config("general.resize_on_border"),
         extend_border_grab_area = hl.get_config("general.extend_border_grab_area"),
+        hover_icon_on_border = hl.get_config("general.hover_icon_on_border"),
       }
     end
     hl.config({ general = {
       resize_on_border = true,
       extend_border_grab_area = math.max(tonumber(saved_edges.extend_border_grab_area) or 0, EDGE_GRAB_AREA),
     } })
+    -- Only worth watching when the resize cursor is wanted at all.
+    if saved_edges.hover_icon_on_border ~= false then
+      edge_icon = nil
+      if edge_timer then edge_timer:set_enabled(true)
+      else edge_timer = hl.timer(update_edge_icon, { timeout = 40, type = "repeat" }) end
+    end
   elseif saved_edges then
+    if edge_timer then edge_timer:set_enabled(false) end
+    edge_icon = nil
     hl.config({ general = saved_edges })
     saved_edges = nil
   end

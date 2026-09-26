@@ -46,6 +46,11 @@ windows this moves the split to the neighbour. Omarchy turns Hyprland's
 edge is easy to hit inside the gap, and puts the previous values back when the
 setting is switched off.
 
+Hyprland shows the resize cursor on every edge, including the edges of tiled
+windows that sit against the screen or the bar and cannot be resized. While
+the setting is on, the plugin watches the pointer and hides the resize cursor
+on those edges, so it only appears where dragging does something.
+
 ## Keyboard
 
 While a bar popup is open, Super + left/right step between popups; the plain
