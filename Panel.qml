@@ -35,6 +35,8 @@ Panel {
   readonly property bool popupArrowKeys: setting("popupArrowKeys", true) === true
   readonly property bool resizeOnEdges: setting("resizeOnEdges", true) === true
   readonly property bool shortSwipe: setting("shortSwipe", true) === true
+  readonly property bool pinchFullscreen: setting("pinchFullscreen", true) === true
+  readonly property bool pinchMaximize: setting("pinchMaximize", false) === true
   readonly property string startPanel: setting("startPanel", "last") === "first" ? "first" : "last"
 
   property string lastPanel: ""
@@ -67,6 +69,8 @@ Panel {
       popupArrowKeys: popupArrowKeys,
       resizeOnEdges: resizeOnEdges,
       shortSwipe: shortSwipe,
+      pinchFullscreen: pinchFullscreen,
+      pinchMaximize: pinchMaximize,
       startPanel: startPanel
     }
   }
@@ -92,6 +96,8 @@ Panel {
       + "popupArrowKeys=" + popupArrowKeys + "\n"
       + "resizeOnEdges=" + resizeOnEdges + "\n"
       + "shortSwipe=" + shortSwipe + "\n"
+      + "pinchFullscreen=" + pinchFullscreen + "\n"
+      + "pinchMaximize=" + pinchMaximize + "\n"
   }
 
   // Every per-monitor instance sees the same settings, so writing an identical
@@ -272,32 +278,39 @@ Panel {
     { key: "fingers", kind: "multi", label: "Fingers",
       options: [{ value: "threeFingers", label: "Three" }, { value: "fourFingers", label: "Four" }] },
     { key: "workspaceSwipe", kind: "toggle", label: "Swipe between workspaces",
-      description: "Left and right follow your fingers, like Spaces on macOS" },
+      description: "Follows your fingers, like Spaces on macOS" },
     { key: "shortSwipe", kind: "choice", label: "Switch after",
       options: [{ value: "short", label: "Short swipe" }, { value: "half", label: "Halfway" }] },
     { key: "stopAtLastWorkspace", kind: "toggle", label: "Stop at the last workspace",
-      description: "Otherwise swiping past it creates a new, empty one" },
+      description: "Instead of creating a new, empty one" },
     { key: "swipeUpExpose", kind: "toggle", label: "Swipe up opens Mission Control",
-      description: "All windows at a glance; swipe down to close. Up also closes a bar popup" },
+      description: "All windows at a glance; swipe down to close" },
     { key: "swipeDownPanels", kind: "toggle", label: "Swipe down opens bar popups",
-      description: "Then swipe left and right to move between them" },
+      description: "Then swipe sideways between them" },
     { key: "startPanel", kind: "choice", label: "Popup to open",
       options: [{ value: "last", label: "Last used" }, { value: "first", label: "First" }] },
+    { key: "pinchFullscreen", kind: "toggle", label: "Spread for fullscreen",
+      description: "Pinch to come back" },
+    { key: "pinchMaximize", kind: "choice", label: "Spread makes it",
+      options: [{ value: "fullscreen", label: "Fullscreen" }, { value: "maximize", label: "Maximized" }] },
     { key: "resizeOnEdges", kind: "toggle", label: "Drag edges to resize",
       description: "Pull a window's edge or corner, like on macOS" },
     { key: "windowSwipe", kind: "toggle", label: "Shift + swipe moves the window",
-      description: "Drags the focused window to the next workspace, even past the last" },
+      description: "Carries the window to the next workspace" },
     { key: "popupArrowKeys", kind: "toggle", label: "Super + arrows switch popups",
-      description: "Takes over Super + left/right from window focus while a popup is open" }
+      description: "Instead of window focus while a popup is open" }
   ]
 
   function rowValue(row) {
     if (row.key === "shortSwipe") return shortSwipe ? "short" : "half"
+    if (row.key === "pinchMaximize") return pinchMaximize ? "maximize" : "fullscreen"
     return currentSettings()[row.key]
   }
 
   function setChoice(row, value) {
-    updateSetting(row.key, row.key === "shortSwipe" ? value === "short" : value)
+    if (row.key === "shortSwipe") value = value === "short"
+    else if (row.key === "pinchMaximize") value = value === "maximize"
+    updateSetting(row.key, value)
   }
 
   // Each chip of a multi-select row is its own boolean setting. The last one
@@ -580,7 +593,7 @@ Panel {
         Text {
           width: parent.width
           wrapMode: Text.Wrap
-          text: "With a popup open, swipe left or right to switch popups and up to close. Tab works too."
+          text: "Popup open: swipe sideways to switch, up to close."
           color: root.dim
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption

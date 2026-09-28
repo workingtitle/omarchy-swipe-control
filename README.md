@@ -19,11 +19,17 @@ gesture can be switched off in a settings popup in the bar.
 | Shift + left / right | Carry the focused window to the workspace on that side | same | same |
 | Up | Open Mission Control | Close the popup | — |
 | Down | Open a bar popup (the last used one, or the first) | — | Close Mission Control |
+| Spread / pinch | Make the focused window fullscreen / bring it back | same | — |
 
 As on macOS, a short swipe is enough to move on to the next workspace: the
 switch commits after 30 % of the swipe distance or a brisk flick, instead of
 Hyprland's default of half the distance. Choose **Halfway** in the settings for
 the default behaviour.
+
+Spreading your fingers grows the focused window to fullscreen as it follows
+them, and pinching brings it back, as on macOS. Two-finger pinch stays with the
+apps (zooming in the browser); the fullscreen pinch uses the same finger count
+as the other gestures.
 
 The window is dragged the way your fingers move, so Shift + swiping right
 moves it to the workspace on the right. Moving a window past the last
@@ -124,6 +130,8 @@ Click the icon in the bar. Changes apply at once, without reloading Hyprland.
 | `fourFingers` | `false` | The gestures work with four fingers; both can be on, at least one stays on |
 | `workspaceSwipe` | `true` | Left/right switches workspaces |
 | `shortSwipe` | `true` | A short swipe is enough to switch workspaces, as on macOS; off is Hyprland's halfway threshold |
+| `pinchFullscreen` | `true` | Spread fingers for fullscreen, pinch to come back |
+| `pinchMaximize` | `false` | Spread maximizes (bar stays visible) instead of true fullscreen |
 | `stopAtLastWorkspace` | `true` | The workspace swipe stops at the last workspace instead of creating an empty one |
 | `swipeUpExpose` | `true` | Up opens Mission Control |
 | `swipeDownPanels` | `true` | Down opens bar popups; left/right then moves between them |

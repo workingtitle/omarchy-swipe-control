@@ -36,6 +36,8 @@ local DEFAULTS = {
   popupArrowKeys = true,
   resizeOnEdges = true,
   shortSwipe = true,
+  pinchFullscreen = true,
+  pinchMaximize = false,
 }
 
 local registered = {}
@@ -106,8 +108,10 @@ end
 
 -- Only gestures this file added are unset: Hyprland rejects unsetting one that
 -- does not exist, and a user's own gestures on other finger counts stay put.
-local function add(fingers, direction, action, mods)
-  hl.gesture({ fingers = fingers, direction = direction, action = action, mods = mods })
+local function add(fingers, direction, action, mods, extra)
+  local spec = { fingers = fingers, direction = direction, action = action, mods = mods }
+  for key, value in pairs(extra or {}) do spec[key] = value end
+  hl.gesture(spec)
   table.insert(registered, { fingers = fingers, direction = direction, mods = mods })
 end
 
@@ -118,6 +122,14 @@ local function clear()
   registered = {}
 end
 
+-- Whether the focused window is fullscreen or maximized right now.
+local active_fullscreen = false
+
+local function current_fullscreen()
+  local window = hl.get_active_window()
+  return window ~= nil and (tonumber(window.fullscreen) or 0) ~= 0
+end
+
 -- The whole gesture set for one finger count; three and four fingers can both
 -- be on, and then each gets its own copy.
 local function apply_fingers(f, s)
@@ -126,6 +138,14 @@ local function apply_fingers(f, s)
   if s.windowSwipe then
     add(f, "right", move_window(1), "SHIFT")
     add(f, "left", move_window(-1), "SHIFT")
+  end
+
+  -- Spread to go fullscreen, pinch to come back, as on macOS. Hyprland's
+  -- fullscreen gesture follows the fingers but only toggles, so only the
+  -- direction that fits the focused window is registered.
+  if s.pinchFullscreen and mode ~= "expose" then
+    add(f, active_fullscreen and "pinchin" or "pinchout", "fullscreen", nil,
+      { mode = s.pinchMaximize and "maximize" or "fullscreen" })
   end
 
   if mode == "expose" then
@@ -151,6 +171,7 @@ end
 
 local function apply()
   clear()
+  active_fullscreen = current_fullscreen()
 
   local s = M.settings
   hl.config({ gestures = { workspace_swipe_create_new = not s.stopAtLastWorkspace } })
@@ -389,6 +410,15 @@ end
 local function reconcile_soon()
   hl.timer(reconcile, { timeout = 150, type = "oneshot" })
 end
+
+-- Focus moving to another window, or a window entering or leaving fullscreen,
+-- can flip which pinch direction fits.
+local function refresh_pinch()
+  if M.settings and M.settings.pinchFullscreen and current_fullscreen() ~= active_fullscreen then apply() end
+end
+
+hl.on("window.active", refresh_pinch)
+hl.on("window.fullscreen", refresh_pinch)
 
 hl.on("layer.opened", function(layer)
   local tracked = layer and open_layers[layer.namespace]

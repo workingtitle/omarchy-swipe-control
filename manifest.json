@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "workingtitle",
   "license": "MIT",
-  "description": "macOS-style trackpad control for Omarchy: 1:1 workspace swipes, Mission Control with live previews on swipe up, a Control Center-style swipe through the bar's popups, and Shift + swipe to carry windows between workspaces.",
+  "description": "macOS-style trackpad control for Omarchy: 1:1 workspace swipes, Mission Control with live previews on swipe up, a Control Center-style swipe through the bar's popups, pinch to fullscreen, and Shift + swipe to carry windows between workspaces.",
   "kinds": [
     "bar-widget"
   ],
@@ -29,7 +29,9 @@
       "windowSwipe": true,
       "popupArrowKeys": true,
       "resizeOnEdges": true,
-      "shortSwipe": true
+      "shortSwipe": true,
+      "pinchFullscreen": true,
+      "pinchMaximize": false
     },
     "schema": [
       {
@@ -97,6 +99,18 @@
         "type": "boolean",
         "label": "Resize windows by dragging their edges and corners",
         "defaultValue": true
+      },
+      {
+        "key": "pinchFullscreen",
+        "type": "boolean",
+        "label": "Spread fingers to go fullscreen, pinch to come back",
+        "defaultValue": true
+      },
+      {
+        "key": "pinchMaximize",
+        "type": "boolean",
+        "label": "Spread maximizes (bar stays) instead of true fullscreen",
+        "defaultValue": false
       }
     ]
   }
