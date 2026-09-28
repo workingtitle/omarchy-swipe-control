@@ -35,6 +35,7 @@ local DEFAULTS = {
   windowSwipe = true,
   popupArrowKeys = true,
   resizeOnEdges = true,
+  shortSwipe = true,
 }
 
 local registered = {}
@@ -339,8 +340,28 @@ local function set_resize_on_edges(on)
   end
 end
 
+-- On macOS a short flick is enough to move on to the next Space. Hyprland
+-- snaps back unless the swipe covered half its distance or was fast; the short
+-- swipe lowers both thresholds and puts the previous values back when off.
+local SHORT_SWIPE = { workspace_swipe_cancel_ratio = 0.15, workspace_swipe_min_speed_to_force = 5 }
+local saved_swipe
+
+local function set_short_swipe(on)
+  if on then
+    if not saved_swipe then
+      saved_swipe = {}
+      for key in pairs(SHORT_SWIPE) do saved_swipe[key] = hl.get_config("gestures." .. key) end
+    end
+    hl.config({ gestures = SHORT_SWIPE })
+  elseif saved_swipe then
+    hl.config({ gestures = saved_swipe })
+    saved_swipe = nil
+  end
+end
+
 function M.reload()
   M.settings = load_settings()
+  set_short_swipe(M.settings.shortSwipe)
   set_resize_on_edges(M.settings.resizeOnEdges)
   set_popup_keys(mode == "popup" and M.settings.popupArrowKeys)
   apply()

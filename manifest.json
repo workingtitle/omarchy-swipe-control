@@ -28,7 +28,8 @@
       "startPanel": "last",
       "windowSwipe": true,
       "popupArrowKeys": true,
-      "resizeOnEdges": true
+      "resizeOnEdges": true,
+      "shortSwipe": true
     },
     "schema": [
       {
@@ -47,6 +48,12 @@
         "key": "workspaceSwipe",
         "type": "boolean",
         "label": "Swipe between workspaces",
+        "defaultValue": true
+      },
+      {
+        "key": "shortSwipe",
+        "type": "boolean",
+        "label": "A short swipe is enough to switch workspaces, as on macOS",
         "defaultValue": true
       },
       {

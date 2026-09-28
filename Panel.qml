@@ -34,6 +34,7 @@ Panel {
   readonly property bool windowSwipe: setting("windowSwipe", true) === true
   readonly property bool popupArrowKeys: setting("popupArrowKeys", true) === true
   readonly property bool resizeOnEdges: setting("resizeOnEdges", true) === true
+  readonly property bool shortSwipe: setting("shortSwipe", true) === true
   readonly property string startPanel: setting("startPanel", "last") === "first" ? "first" : "last"
 
   property string lastPanel: ""
@@ -65,6 +66,7 @@ Panel {
       windowSwipe: windowSwipe,
       popupArrowKeys: popupArrowKeys,
       resizeOnEdges: resizeOnEdges,
+      shortSwipe: shortSwipe,
       startPanel: startPanel
     }
   }
@@ -89,6 +91,7 @@ Panel {
       + "windowSwipe=" + windowSwipe + "\n"
       + "popupArrowKeys=" + popupArrowKeys + "\n"
       + "resizeOnEdges=" + resizeOnEdges + "\n"
+      + "shortSwipe=" + shortSwipe + "\n"
   }
 
   // Every per-monitor instance sees the same settings, so writing an identical
@@ -270,6 +273,8 @@ Panel {
       options: [{ value: "threeFingers", label: "Three" }, { value: "fourFingers", label: "Four" }] },
     { key: "workspaceSwipe", kind: "toggle", label: "Swipe between workspaces",
       description: "Left and right follow your fingers, like Spaces on macOS" },
+    { key: "shortSwipe", kind: "choice", label: "Switch after",
+      options: [{ value: "short", label: "Short swipe" }, { value: "half", label: "Halfway" }] },
     { key: "stopAtLastWorkspace", kind: "toggle", label: "Stop at the last workspace",
       description: "Otherwise swiping past it creates a new, empty one" },
     { key: "swipeUpExpose", kind: "toggle", label: "Swipe up opens Mission Control",
@@ -287,11 +292,12 @@ Panel {
   ]
 
   function rowValue(row) {
+    if (row.key === "shortSwipe") return shortSwipe ? "short" : "half"
     return currentSettings()[row.key]
   }
 
   function setChoice(row, value) {
-    updateSetting(row.key, value)
+    updateSetting(row.key, row.key === "shortSwipe" ? value === "short" : value)
   }
 
   // Each chip of a multi-select row is its own boolean setting. The last one

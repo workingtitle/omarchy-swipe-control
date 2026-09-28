@@ -20,6 +20,11 @@ gesture can be switched off in a settings popup in the bar.
 | Up | Open Mission Control | Close the popup | — |
 | Down | Open a bar popup (the last used one, or the first) | — | Close Mission Control |
 
+As on macOS, a short swipe is enough to move on to the next workspace: the
+switch commits after 15 % of the swipe distance or a gentle flick, instead of
+Hyprland's default of half the distance. Choose **Halfway** in the settings for
+the default behaviour.
+
 The window is dragged the way your fingers move, so Shift + swiping right
 moves it to the workspace on the right. Moving a window past the last
 workspace creates a new one.
@@ -118,6 +123,7 @@ Click the icon in the bar. Changes apply at once, without reloading Hyprland.
 | `threeFingers` | `true` | The gestures work with three fingers |
 | `fourFingers` | `false` | The gestures work with four fingers; both can be on, at least one stays on |
 | `workspaceSwipe` | `true` | Left/right switches workspaces |
+| `shortSwipe` | `true` | A short swipe is enough to switch workspaces, as on macOS; off is Hyprland's halfway threshold |
 | `stopAtLastWorkspace` | `true` | The workspace swipe stops at the last workspace instead of creating an empty one |
 | `swipeUpExpose` | `true` | Up opens Mission Control |
 | `swipeDownPanels` | `true` | Down opens bar popups; left/right then moves between them |
