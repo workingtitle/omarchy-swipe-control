@@ -343,7 +343,7 @@ end
 -- On macOS a short flick is enough to move on to the next Space. Hyprland
 -- snaps back unless the swipe covered half its distance or was fast; the short
 -- swipe lowers both thresholds and puts the previous values back when off.
-local SHORT_SWIPE = { workspace_swipe_cancel_ratio = 0.15, workspace_swipe_min_speed_to_force = 5 }
+local SHORT_SWIPE = { workspace_swipe_cancel_ratio = 0.3, workspace_swipe_min_speed_to_force = 15 }
 local saved_swipe
 
 local function set_short_swipe(on)

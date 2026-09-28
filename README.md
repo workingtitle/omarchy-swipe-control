@@ -21,7 +21,7 @@ gesture can be switched off in a settings popup in the bar.
 | Down | Open a bar popup (the last used one, or the first) | — | Close Mission Control |
 
 As on macOS, a short swipe is enough to move on to the next workspace: the
-switch commits after 15 % of the swipe distance or a gentle flick, instead of
+switch commits after 30 % of the swipe distance or a brisk flick, instead of
 Hyprland's default of half the distance. Choose **Halfway** in the settings for
 the default behaviour.
 
