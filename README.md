@@ -175,6 +175,18 @@ finds them through the bar's module slots. A larger change to the Omarchy bar
 can break popup navigation; workspace swipes, window moves and Mission Control
 do not depend on it.
 
+## Troubleshooting
+
+- **Mission Control or popup navigation stops responding after the plugin was
+  updated or edited.** The shell reloads changed plugins in place and can keep
+  an old instance answering the plugin's IPC target (the shell log shows
+  "another handler is registered for target io.github.workingtitle.gestures").
+  Run `omarchy restart shell`.
+- **Swipe up does nothing.** While a bar popup is open, swipe up closes it
+  instead of opening Mission Control. Check with
+  `hyprctl repl 'return OmarchyGestures.describe()'`: the first word is the
+  current mode (`normal`, `popup` or `expose`).
+
 ## License
 
 MIT, see [LICENSE](LICENSE).

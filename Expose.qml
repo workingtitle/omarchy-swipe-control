@@ -104,6 +104,18 @@ Scope {
     return { x: at[0] - mx, y: at[1] - my, w: Math.max(1, size[0]), h: Math.max(1, size[1]) }
   }
 
+  // Only windows that show at least partly on the monitor, as in Mission
+  // Control. Omarchy parks pre-started terminals far off screen; they would
+  // take grid slots and show nothing.
+  function onScreen(toplevel) {
+    var g = geometry(toplevel)
+    var scale = monitor && monitor.scale ? monitor.scale : 1
+    var width = monitor ? monitor.width / scale : 0
+    var height = monitor ? monitor.height / scale : 0
+    if (width <= 0 || height <= 0) return true
+    return g.x + g.w > 0 && g.y + g.h > 0 && g.x < width && g.y < height
+  }
+
   function windowsOf(workspace) {
     if (!workspace) return []
     var list = []
@@ -111,7 +123,7 @@ Scope {
     for (var i = 0; i < all.length; i++) {
       var t = all[i]
       var ipc = t.lastIpcObject || {}
-      if (t.workspace === workspace && ipc.hidden !== true && ipc.mapped !== false) list.push(t)
+      if (t.workspace === workspace && ipc.hidden !== true && ipc.mapped !== false && onScreen(t)) list.push(t)
     }
     // Reading order of the real layout, so the grid keeps the windows roughly
     // where they were.

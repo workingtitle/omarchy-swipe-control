@@ -348,11 +348,33 @@ end
 
 -- Switching popups closes one and opens the next, in either order, so the
 -- mode follows the set of layers on screen rather than the last event.
+-- The events alone can drift (a layer can close while the shell restarts, and
+-- Hyprland reuses addresses), so shortly after each event the tracked set is
+-- checked against the layers Hyprland actually has mapped.
+local function reconcile()
+  for namespace, tracked in pairs(open_layers) do
+    local present = {}
+    for _, layer in ipairs(hl.get_layers({ namespace = namespace })) do
+      if layer.mapped ~= false then present[layer.address] = true end
+    end
+    for address in pairs(tracked) do
+      if not present[address] then tracked[address] = nil end
+    end
+    for address in pairs(present) do tracked[address] = true end
+  end
+  update_mode()
+end
+
+local function reconcile_soon()
+  hl.timer(reconcile, { timeout = 150, type = "oneshot" })
+end
+
 hl.on("layer.opened", function(layer)
   local tracked = layer and open_layers[layer.namespace]
   if not tracked then return end
   tracked[layer.address] = true
   update_mode()
+  reconcile_soon()
   -- Lets the plugin remember popups opened by mouse or hotkey as well.
   if layer.namespace == PANEL_NAMESPACE then run(IPC .. "panelOpened")() end
 end)
@@ -362,12 +384,15 @@ hl.on("layer.closed", function(layer)
   if not tracked then return end
   tracked[layer.address] = nil
   update_mode()
+  reconcile_soon()
 end)
 
 -- Blur what is behind Mission Control, and let it animate itself.
 hl.layer_rule({ match = { namespace = EXPOSE_NAMESPACE }, blur = true, no_anim = true, animation = "none" })
 
 M.reload()
+-- Popups or Mission Control may already be open when Hyprland reloads.
+reconcile_soon()
 
 OmarchyGestures = M
 return M
