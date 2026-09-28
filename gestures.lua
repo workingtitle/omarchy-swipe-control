@@ -142,9 +142,11 @@ local function apply_fingers(f, s)
 
   -- Spread to go fullscreen, pinch to come back, as on macOS. Hyprland's
   -- fullscreen gesture follows the fingers but only toggles, so only the
-  -- direction that fits the focused window is registered.
+  -- direction that fits the focused window is registered. Hyprland names the
+  -- directions by scale: "pinchin" is fingers spreading (scale above 1),
+  -- "pinchout" is fingers closing.
   if s.pinchFullscreen and mode ~= "expose" then
-    add(f, active_fullscreen and "pinchin" or "pinchout", "fullscreen", nil,
+    add(f, active_fullscreen and "pinchout" or "pinchin", "fullscreen", nil,
       { mode = s.pinchMaximize and "maximize" or "fullscreen" })
   end
 
