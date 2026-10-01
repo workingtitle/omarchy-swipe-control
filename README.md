@@ -9,7 +9,7 @@ Hold Shift while swiping to carry the focused window along to the next
 workspace, and resize windows by dragging their edges and corners. Every
 gesture can be switched off in a settings popup in the bar.
 
-![Swipe Control settings popup](preview.png)
+![Swipe Control on Omarchy with Tokyo Night: window overview, settings, bar menus, and gesture and keyboard controls](preview.png)
 
 ## Gestures
 
