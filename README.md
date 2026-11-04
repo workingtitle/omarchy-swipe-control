@@ -45,6 +45,8 @@ behind is blurred.
   and press Enter.
 - Click a workspace to switch to it, or step through the workspaces with the
   left and right arrows; Enter closes Mission Control there.
+- Drag a workspace thumbnail into a gap in the strip to move it there, as on
+  macOS; the workspaces swap ids and Mission Control stays open.
 - Drag a window onto a workspace thumbnail to move it there.
 - Swipe down, press Escape, or click empty space to close it.
 

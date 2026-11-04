@@ -82,6 +82,48 @@ Scope {
     Qt.callLater(Hyprland.refreshToplevels)
   }
 
+  // An id no workspace uses, as a buffer for reordering.
+  function unusedWorkspaceId() {
+    var used = {}
+    var max = 0
+    var all = Hyprland.workspaces.values
+    for (var i = 0; i < all.length; i++) {
+      var id = all[i].id
+      used[id] = true
+      if (id > max && id < 1000000) max = id
+    }
+    var temp = max + 1
+    while (used[temp]) temp++
+    return temp
+  }
+
+  // Drag-insert reorder of the monitor-local strip, macOS style. Hyprland
+  // ids are fixed, so the contents rotate across the sorted ids via a temp
+  // id as buffer. The overlay stays open; the active workspace object keeps
+  // its windows, only its id changes. fromIdx/toIdx are positions in
+  // workspaces (toIdx is the final position, removal-based).
+  function reorderWorkspace(fromIdx, toIdx) {
+    var list = root.workspaces
+    var n = list.length
+    if (fromIdx < 0 || toIdx < 0 || fromIdx >= n || toIdx >= n || fromIdx === toIdx) return
+    var ids = list.map(function(ws) { return ws.id })
+    var temp = root.unusedWorkspaceId()
+    var i = 0
+    if (fromIdx < toIdx) {
+      dispatch("hl.dsp.workspace.change_id({ workspace = " + ids[fromIdx] + ", id = " + temp + " })")
+      for (i = fromIdx + 1; i <= toIdx; i++)
+        dispatch("hl.dsp.workspace.change_id({ workspace = " + ids[i] + ", id = " + ids[i - 1] + " })")
+      dispatch("hl.dsp.workspace.change_id({ workspace = " + temp + ", id = " + ids[toIdx] + " })")
+    } else {
+      dispatch("hl.dsp.workspace.change_id({ workspace = " + ids[fromIdx] + ", id = " + temp + " })")
+      for (i = fromIdx - 1; i >= toIdx; i--)
+        dispatch("hl.dsp.workspace.change_id({ workspace = " + ids[i] + ", id = " + ids[i + 1] + " })")
+      dispatch("hl.dsp.workspace.change_id({ workspace = " + temp + ", id = " + ids[toIdx] + " })")
+    }
+    Qt.callLater(Hyprland.refreshWorkspaces)
+    Qt.callLater(Hyprland.refreshToplevels)
+  }
+
   // ------------------------------------------------------------------ model
 
   readonly property var workspaces: {
@@ -222,6 +264,15 @@ Scope {
     property var dragWindow: null
     property point dragPoint: Qt.point(0, 0)
 
+    // Workspace thumbnail drag (macOS-style reorder). dragFromIndex is the
+    // position in root.workspaces, dropIndex the removal-based insertion
+    // position (final index), dropLineX the line position in content coords.
+    property var dragWorkspace: null
+    property int dragFromIndex: -1
+    property int dropIndex: -1
+    property point dragWorkspacePoint: Qt.point(0, 0)
+    property real dropLineX: 0
+
     function workspaceAt(x, y) {
       for (var i = 0; i < strip.children.length; i++) {
         var thumb = strip.children[i]
@@ -230,6 +281,27 @@ Scope {
         if (p.x >= 0 && p.y >= 0 && p.x <= thumb.width && p.y <= thumb.height) return thumb.workspace
       }
       return null
+    }
+
+    // Insertion position among the thumbs with the dragged one removed:
+    // count of remaining thumbs whose center is left of the pointer. Also
+    // updates dropLineX for the indicator.
+    function updateWorkspaceDrop() {
+      var thumbs = []
+      for (var i = 0; i < strip.children.length; i++) {
+        var child = strip.children[i]
+        if (child.workspace && child.workspace !== overlay.dragWorkspace) thumbs.push(child)
+      }
+      var sp = strip.mapFromItem(content, overlay.dragWorkspacePoint.x, overlay.dragWorkspacePoint.y)
+      var idx = thumbs.length
+      for (var k = 0; k < thumbs.length; k++) {
+        if (sp.x < thumbs[k].x + thumbs[k].width / 2) { idx = k; break }
+      }
+      overlay.dropIndex = idx
+      var lineLocal = 0
+      if (idx < thumbs.length) lineLocal = thumbs[idx].x - overlay.stripSpacing / 2
+      else if (thumbs.length > 0) lineLocal = thumbs[thumbs.length - 1].x + thumbs[thumbs.length - 1].width + overlay.stripSpacing / 2
+      overlay.dropLineX = strip.x + lineLocal
     }
 
     Item {
@@ -286,14 +358,17 @@ Scope {
           delegate: Item {
             id: thumb
             required property var modelData
+            required property int index
             readonly property var workspace: modelData
             readonly property bool active: modelData === root.activeWorkspace
             readonly property bool dropTarget: overlay.dragWindow !== null
               && overlay.workspaceAt(overlay.dragPoint.x, overlay.dragPoint.y) === modelData
+            readonly property bool dragged: overlay.dragWorkspace === modelData
             readonly property real ratio: height / Math.max(1, overlay.height)
 
             height: overlay.thumbHeight
-            width: Math.round(height * overlay.width / Math.max(1, overlay.height))
+            width: dragged ? 0 : Math.round(height * overlay.width / Math.max(1, overlay.height))
+            opacity: dragged ? 0 : 1
 
             Rectangle {
               anchors.fill: parent
@@ -333,7 +408,37 @@ Scope {
               id: thumbMouse
               anchors.fill: parent
               hoverEnabled: true
-              onClicked: root.focusWorkspace(thumb.workspace)
+              property point pressPoint
+
+              onPressed: function(mouse) { pressPoint = Qt.point(mouse.x, mouse.y) }
+              onPositionChanged: function(mouse) {
+                if (!pressed || overlay.dragWindow) return
+                if (!overlay.dragWorkspace && Math.hypot(mouse.x - pressPoint.x, mouse.y - pressPoint.y) > 12) {
+                  var from = root.workspaces.indexOf(thumb.workspace)
+                  if (from < 0 || root.workspaces.length < 2) return
+                  overlay.dragWorkspace = thumb.workspace
+                  overlay.dragFromIndex = from
+                  overlay.dragWorkspacePoint = mapToItem(content, mouse.x, mouse.y)
+                  overlay.updateWorkspaceDrop()
+                }
+                if (overlay.dragWorkspace === thumb.workspace)
+                  overlay.dragWorkspacePoint = mapToItem(content, mouse.x, mouse.y)
+                if (overlay.dragWorkspace) overlay.updateWorkspaceDrop()
+              }
+              onReleased: function(mouse) {
+                if (overlay.dragWorkspace) {
+                  var from = overlay.dragFromIndex
+                  var to = overlay.dropIndex
+                  overlay.dragWorkspace = null
+                  overlay.dragFromIndex = -1
+                  overlay.dropIndex = -1
+                  // Gap insert only: dropping back on the origin slot is a
+                  // no-op, otherwise rotate the ids. Stays in overview.
+                  if (from >= 0 && to >= 0 && from !== to) root.reorderWorkspace(from, to)
+                } else {
+                  root.focusWorkspace(thumb.workspace)
+                }
+              }
             }
           }
         }
@@ -444,6 +549,41 @@ Scope {
         y: overlay.dragPoint.y - height / 2
         z: 10
         opacity: 0.9
+      }
+
+      // Insertion line for workspace reorder, macOS style.
+      Rectangle {
+        visible: overlay.dragWorkspace !== null
+        x: overlay.dropLineX - 1
+        y: strip.y
+        width: 2
+        height: overlay.thumbHeight
+        radius: 1
+        color: root.accent
+        z: 10
+      }
+
+      // The workspace being dragged, following the pointer at thumbnail size.
+      Rectangle {
+        visible: overlay.dragWorkspace !== null
+        width: Math.round(overlay.thumbHeight * overlay.width / Math.max(1, overlay.height))
+        height: overlay.thumbHeight
+        x: overlay.dragWorkspacePoint.x - width / 2
+        y: overlay.dragWorkspacePoint.y - height / 2
+        z: 11
+        opacity: 0.9
+        color: Color.background
+        radius: Style.cornerRadius
+        border.width: 2
+        border.color: root.accent
+
+        Text {
+          anchors.centerIn: parent
+          text: overlay.dragWorkspace ? (overlay.dragWorkspace.name || String(overlay.dragWorkspace.id)) : ""
+          color: root.accent
+          font.family: Style.font.family
+          font.pixelSize: Style.font.body
+        }
       }
     }
   }
