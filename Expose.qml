@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
@@ -295,14 +296,38 @@ Scope {
             height: overlay.thumbHeight
             width: Math.round(height * overlay.width / Math.max(1, overlay.height))
 
+            // Rounded mask for the frame below: clip: true is rectangular,
+            // so without this the window previews paint square corners over
+            // the rounded frame. Same MultiEffect pattern as the shell's own
+            // image picker.
+            Item {
+              id: thumbMask
+              anchors.fill: parent
+              visible: false
+              layer.enabled: true
+
+              Rectangle {
+                anchors.fill: parent
+                color: "white"
+                radius: Style.cornerRadius
+                antialiasing: true
+              }
+            }
+
             Rectangle {
               anchors.fill: parent
               color: Color.background
               radius: Style.cornerRadius
-              clip: true
-              border.width: thumb.active || thumb.dropTarget || thumbMouse.containsMouse ? 2 : 1
-              border.color: thumb.active || thumb.dropTarget ? root.accent
-                : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, thumbMouse.containsMouse ? 0.5 : 0.2)
+              // No clip: true here — Qt Quick clips rectangularly only, and
+              // it conflicts with the layer mask below, which clips rounded.
+              layer.enabled: true
+              layer.smooth: true
+              layer.effect: MultiEffect {
+                maskEnabled: true
+                maskSource: thumbMask
+                maskThresholdMin: 0.5
+                maskSpreadAtMin: 0.5
+              }
 
               Repeater {
                 model: root.open ? root.windowsOf(thumb.workspace) : []
@@ -317,6 +342,18 @@ Scope {
                   live: false
                 }
               }
+            }
+
+            // Border above the previews, like the tile hover outline: with
+            // edge-to-edge content the previews would otherwise paint over
+            // the frame's own border ring.
+            Rectangle {
+              anchors.fill: parent
+              color: "transparent"
+              radius: Style.cornerRadius
+              border.width: thumb.active || thumb.dropTarget || thumbMouse.containsMouse ? 2 : 1
+              border.color: thumb.active || thumb.dropTarget ? root.accent
+                : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, thumbMouse.containsMouse ? 0.5 : 0.2)
             }
 
             Text {
@@ -365,11 +402,35 @@ Scope {
           Behavior on width { NumberAnimation { duration: root.animationMs; easing.type: Easing.OutCubic } }
           Behavior on height { NumberAnimation { duration: root.animationMs; easing.type: Easing.OutCubic } }
 
+          // Rounded mask: the preview would otherwise paint square corners
+          // under the rounded hover outline, same as the thumbnails above.
+          Item {
+            id: tileMask
+            anchors.fill: parent
+            visible: false
+            layer.enabled: true
+
+            Rectangle {
+              anchors.fill: parent
+              color: "white"
+              radius: Style.cornerRadius
+              antialiasing: true
+            }
+          }
+
           ScreencopyView {
             id: preview
             anchors.fill: parent
             captureSource: tile.modelData.wayland
             live: root.open
+            layer.enabled: true
+            layer.smooth: true
+            layer.effect: MultiEffect {
+              maskEnabled: true
+              maskSource: tileMask
+              maskThresholdMin: 0.5
+              maskSpreadAtMin: 0.5
+            }
           }
 
           Rectangle {
